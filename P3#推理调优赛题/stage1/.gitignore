@@ -1,7 +1,31 @@
-# embed repos
+# we have to embed these sub repos to track the code change :(
+
+# meta
+.vscode/
 .idea/
 .gitee/
 .jenkins/
 .ipynb_checkpoints/
+
+# build
 build/
 *.egg-info
+dist/
+
+# doc
+doc/
+docs/
+
+# ouputs & logs
+output/
+kernel_meta/
+*.log
+performance_serving/testLog/
+performance_serving/result_*.json
+
+# data
+performance_serving/alpaca_*.json
+
+# model ckpt
+llm-serving/checkpoint_download/
+performance_serving/tokenizer.model
