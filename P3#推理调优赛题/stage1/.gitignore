@@ -1,0 +1,7 @@
+# embed repos
+.idea/
+.gitee/
+.jenkins/
+.ipynb_checkpoints/
+build/
+*.egg-info
