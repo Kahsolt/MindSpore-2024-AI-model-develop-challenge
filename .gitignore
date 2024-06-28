@@ -1,0 +1,15 @@
+# meta
+.vscode/
+__pycache__/
+
+# material
+**/material/*
+!**/material/*.cmd
+
+# generated
+gen/
+out/
+
+# logs
+log/
+*.log
