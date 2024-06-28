@@ -25,6 +25,7 @@ performance_serving/result_*.json
 
 # data
 performance_serving/alpaca_*.json
+file_npy_base/*
 
 # model ckpt
 llm-serving/checkpoint_download/

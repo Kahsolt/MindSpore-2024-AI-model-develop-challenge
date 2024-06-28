@@ -95,7 +95,7 @@ class LargeModelClient:
         # print(para)
         body["parameters"] = para
         if stream:
-            res = self.return_stream(body, stream)
+            res = self.return_stream(body, stream)      # <- this way
         else:
             res = self.return_all(body, stream)
         CompletedProgress += 1
@@ -119,6 +119,8 @@ class LargeModelClient:
     def return_stream(self, request_body, stream):
         url = self.url_generate_stream if stream else self.url_generate_all
         headers = {"Content-Type": "application/json", "Connection": "close"}
+
+        # 时间测量：请求发起 - 数据接收完毕
         start_time = time.time()
         resp = requests.request("POST", url, data=json.dumps(request_body), headers=headers, stream=True)
         lis = []
@@ -129,35 +131,35 @@ class LargeModelClient:
                     first_token_time = time.time() - start_time
                     LOGGER.info(f"first_token_time is {first_token_time}")
                 # print(json.loads(line))
-                # if
-                print(json.loads(line)["data"][0]["generated_text"])
-                lis.append(json.loads(line)["data"][0]["generated_text"])
-                # data = json.loads(line)
-                # print(data['id'])
+                li = json.loads(line)["data"][0]["generated_text"]
+                print(li)
+                lis.append(li)
         res_time = time.time() - start_time
+
+        # print(request_body["parameters"]["return_full_text"])
         if request_body["parameters"]["return_full_text"]:
-            # print(request_body["parameters"]["return_full_text"])
             resp_text = lis[-1]
             # print("******stream full text********")
             # print(resp_text)
         else:
-            # print("******stream completeness result********")
             resp_text = "".join(lis)
-            # print("".join(lis))
-        return {"input": request_body["inputs"],
-                "resp_text": resp_text,
-                "res_time": res_time,
-                "first_token_time": first_token_time}
+            # print("******stream completeness result********")
+            # print(resp_text)
+        return {
+            "input": request_body["inputs"],
+            "resp_text": resp_text,
+            "res_time": res_time,
+            "first_token_time": first_token_time,
+        }
 
 
 def generate_thread_tasks(testcases, all_count, port):
     client = LargeModelClient(port)
-    print(all_count)
-    i = 0
     thread_tasks = []
+    i = 0
     k = 0
     while True:
-        print(k, ":", all_count)
+        #print(k, ":", all_count)
         if i > len(testcases) - 1:
             i = 0
         thread_tasks.append(MyThread(client.send_request, (testcases[i], all_count)))
@@ -170,32 +172,39 @@ def generate_thread_tasks(testcases, all_count, port):
 
 
 def test_main(port, inputs, outputs, x, out_dir, test_all_time=3600):
-    if not os.path.exists(out_dir):
-        os.makedirs(out_dir)
     print('start Test...')
     testcases = []
     for i, input_string in enumerate(inputs):
-        testcase = {"input": f"{input_string}", "do_sample": "False", "return_full_text": "True", "stream": True,
-                    "max_new_tokens": get_text_token_num(Tokenizer, outputs[i])}
+        testcase = {
+            "input": f"{input_string}", 
+            "do_sample": "False", 
+            "return_full_text": "True", 
+            "stream": True,     # <- this way
+            "max_new_tokens": get_text_token_num(Tokenizer, outputs[i]),
+        }
         testcases.append(testcase)
-        # print(testcase)
     LOGGER.info(f"testcases length is {len(testcases)}")
+
     # 每次发送的间隔时间
     interval = round(1 / x, 2)
-    all_counts = int(test_all_time * x)
     # 1h内一共需要发送多少次请求
+    all_counts = int(test_all_time * x)
+    print('all_counts:', all_counts)
+    # 为每个推理样本生成一个线程
     thread_tasks = generate_thread_tasks(testcases, all_counts, port)
+
+    # NOTE: 时间测量 开始第一个任务 - 结束最后一个任务
     start_time = time.time()
     LOGGER.info(f"Start send request, avg interval is {interval}")
-    for task in thread_tasks:
+    for task in thread_tasks:   # 顺次开始线程
         task.start()
         delayMsecond(poisson_random_s(interval))
-
-    for task in thread_tasks:
+    for task in thread_tasks:   # 等待全部完成
         task.join()
-
     end_time = time.time()
     LOGGER.info(f"All Tasks Done; Exec Time is {end_time - start_time}")
+
+    if not os.path.exists(out_dir): os.makedirs(out_dir)
     gen_json = os.path.join(out_dir, f"result_{x}_x.json")
     with open(gen_json, "w+") as f:
         f.write(json.dumps(RESULT))
@@ -204,11 +213,16 @@ def test_main(port, inputs, outputs, x, out_dir, test_all_time=3600):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="test serving performance")
     parser.add_argument("-X", "--qps", help='x req/s', required=True, type=float)
-    parser.add_argument("-P", "--port", help='port, default is 8000', required=True)
-    parser.add_argument("-O", "--out_dir", help='dir for saving results', required=True)
+    parser.add_argument("-P", "--port", help='port, default is 8000', default=8835, type=int)
+    parser.add_argument("-O", "--out_dir", help='dir for saving results', default="./")
     parser.add_argument("-T", "--test_time", help='test all time, default 1h', required=False, type=int, default=3600)
+    parser.add_argument("--task", required=True, type=int, choices=[1, 2])
     args = parser.parse_args()
-    with open("./alpaca_5010.json") as f:
+    if args.task == 1:
+        fp = "./alpaca_5010.json"
+    elif args.task == 2:
+        fp = "./alpaca_521.json"
+    with open(fp) as f:
         alpaca_data = json.loads(f.read())
     INPUTS_DATA = []
     OUTPUTS_DATA = []

@@ -3,18 +3,18 @@
 
 #### 环境构建
 
+⚪ 本地 (打桩调试)
+
 - `conda create -n llm python==3.9.19`
-- install [MindSpore](https://www.mindspore.cn/install), for exmaple
-  - `pip install https://ms-release.obs.cn-north-4.myhuaweicloud.com/2.2.14/MindSpore/cpu/x86_64/mindspore-2.2.14-cp39-cp39-win_amd64.whl --trusted-host ms-release.obs.cn-north-4.myhuaweicloud.com -i https://pypi.tuna.tsinghua.edu.cn/simple`
-  - `python -c "import mindspore;mindspore.set_context(device_target='CPU');mindspore.run_check()"`
-- run mindformers
-  - `cd mindformers`
-  - `pip -r requirements.txt`
-  - `run.cmd`
-- run llm-serving
-  - `cd llm-serving`
-  - `python setup.py bdist_wheel`
-  - `pip install dist\mindspore_serving-2.1.0-py39-none-any.whl`
+- run `material\download.cmd` and unzip everything under this repo root
+- `run_init.cmd`
+
+⚪ 云上 (实测)
+
+⚠ 云实验环境不保存系统状态，每次重启都要重新安装 python lib
+
+- see [run_init.sh](./run_init.sh) and [run_infer.sh](./run_infer.sh)
+- overwrite `llm-serving`, `mindformers` and `performance_serving` with this repo's modified version
 
 
 #### 资源材料
@@ -33,8 +33,13 @@
 
 #### 测试数据集
 
-- 见 [performance_serving/alpaca_data.json](performance_serving/alpaca_data.json)
-- 共计 52002 个问答测试样例, 三个字段 instruction/input/output
+- 速度测试: 测数据集 [performance_serving/alpaca_5010.json](performance_serving/alpaca_5010.json) 前 1500 个样本的推理时长
+  - 测试命令: `python test_serving_performance.py --task 1 -X 0.5 -T 3000`
+  - 基准设置: -X 0.5 -T 3000, 推理时间: 3551.9252s (⚠ 必须保证 -X 乘以 -T 等于 1500，可自行改动)
+- 精度测试: 测数据集 [performance_serving/alpaca_521.json](performance_serving/alpaca_521.json) 前 500 个样本的推理 logits 结果
+  - logits 保存命令: `python test_serving_performance.py --task 2 -X 0.1 -T 5000`
+    - ⚠ 此处 `-X 0.1 -T 5000` 为固定的竞赛设置不可改动
+  - logits 校验命令: `python acc_allclose.py --base_path /home/ma-user/work/file_npy_base --new_path /home/ma-user/work/file_npy_new`
 
 ----
 by Armit
