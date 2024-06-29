@@ -1,4 +1,3 @@
-from tabnanny import check
 from typing import List, Optional, Tuple
 import copy
 import time
@@ -37,7 +36,6 @@ class Master:
             self._init_mem_pool()  # PA
 
     # PA
-
     def _init_mem_pool(self):
         ServingBlockMemPool.init(self.config.pa_config.num_blocks, self.config.pa_config.block_size)
 
@@ -156,15 +154,11 @@ class Master:
 
         self.scheduler.upate_entries_after_one_step(output_tokens, end_token, index_list)
         str_outputs = [''] * len(output_tokens)
-        if (self.config.model_config.model_name.startswith(
-                'llama') or self.config.model_config.model_name == 'wizard_coder') and not self._check_error_code(
-            output_tokens[0]):
+        if (self.config.model_config.model_name.startswith('llama') or self.config.model_config.model_name == 'wizard_coder') and not self._check_error_code(output_tokens[0]):
             # str_outputs = self._llama_detokenizer(outputs)
-            str_outputs = self._llama_detokenizer_v2(output_tokens, entry_metadata_list,
-                                                     index_list, skip_special_tokens=True)
+            str_outputs = self._llama_detokenizer_v2(output_tokens, entry_metadata_list, index_list, skip_special_tokens=True)
 
-        elif self.config.model_config.model_name in (
-                'internlm_7b', 'baichuan2pa', 'gpt2') and not self._check_error_code(output_tokens[0]):
+        elif self.config.model_config.model_name in ('internlm_7b', 'baichuan2pa', 'gpt2') and not self._check_error_code(output_tokens[0]):
             str_outputs = self._detokenizer(output_tokens)
         self._counter_of_token += len(output_tokens)
         logging.debug("target is {}, str_outputs is {}".format(outputs, str_outputs))
@@ -237,8 +231,7 @@ class Master:
         prompt_token_ids = None
         logging.debug("request id add_requests_to_schedule_pool {}".format(request_id))
         # 加入baichuan
-        if self.config.model_config.model_name in (
-                'baichuan2pa', 'wizard_coder') or self.config.model_config.model_name.startswith('llama'):
+        if self.config.model_config.model_name in ('baichuan2pa', 'wizard_coder') or self.config.model_config.model_name.startswith('llama'):
             prompt_token_ids = self.tokenizer.encode(prompt)
         elif self.config.model_config.model_name == 'internlm_7b':
             prompt_token_ids = self.tokenizer(prompt)['input_ids'][1:]
@@ -394,28 +387,23 @@ class AsyncMaster(Master):
         return empty_list
 
     async def _run_workers_async(self, current_batch_size, entry_metadata_list):
+        # 计时：字符串层面的端到端
         e_t_e_time = time.time()
 
-        prompt_token_empty_list = self._check_prompt_token_empty(entry_metadata_list,
-                                                                 self.config.model_config.pad_token_id)
+        prompt_token_empty_list = self._check_prompt_token_empty(entry_metadata_list, self.config.model_config.pad_token_id)
         logging.debug("prompt token empty list index_list {}".format(prompt_token_empty_list))
         if len(prompt_token_empty_list) > 0:
-            return self._postprocess([INPUT_EMPTY_TOKEN], entry_metadata_list=entry_metadata_list,
-                                     index_list=prompt_token_empty_list,
-                                     skip_inference=True)
+            return self._postprocess([INPUT_EMPTY_TOKEN], entry_metadata_list=entry_metadata_list, index_list=prompt_token_empty_list, skip_inference=True)
 
         # check prefill out of range data
         out_of_range_index_list = self._check_prompt_out_of_range_index_list(entry_metadata_list)
         logging.debug("out of range prompt index_list {}".format(out_of_range_index_list))
         if len(out_of_range_index_list) > 0:
-            return self._postprocess([INPUT_OUT_OF_TOKEN], entry_metadata_list=entry_metadata_list,
-                                     index_list=out_of_range_index_list,
-                                     skip_inference=True)
+            return self._postprocess([INPUT_OUT_OF_TOKEN], entry_metadata_list=entry_metadata_list, index_list=out_of_range_index_list, skip_inference=True)
 
         # filter prompt data batch list
         input_entry_metadata_list, index_list = self._get_prompt_batch_list(entry_metadata_list)
-        logging.debug("_get_prompt_batch_list prompt index_list {}, input_entry_metadata_list {}"
-                      .format(index_list, input_entry_metadata_list))
+        logging.debug("_get_prompt_batch_list prompt index_list {}, input_entry_metadata_list {}".format(index_list, input_entry_metadata_list))
         # prefill predict
         if len(input_entry_metadata_list) > 0:
             logging.debug('prefill len of input entry_metadata_list is {}'.format(len(input_entry_metadata_list)))

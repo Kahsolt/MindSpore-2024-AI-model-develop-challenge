@@ -42,8 +42,6 @@ from ...tools.logger import logger
 
 __all__ = ['LlamaModel', 'LlamaForCausalLM']
 
-DEBUG_WIN = os.getenv('DEBUG_WIN')
-
 
 class LlamaPreTrainedModel(PreTrainedModel):
     """
@@ -174,6 +172,7 @@ class LlamaModel(LlamaPreTrainedModel):
                 self.norm_out.shard((dp, 1, 1))
 
     # pylint: disable=W0613
+    #@profile
     def construct(self, tokens: Tensor, batch_valid_length=None, batch_index=None, zactivate_len=None,
                   block_tables=None, slot_mapping=None):
         """
@@ -201,6 +200,7 @@ class LlamaModel(LlamaPreTrainedModel):
                 freqs_cis = self.freqs_mgr.increment(batch_valid_length)
         else:
             freqs_cis = self.freqs_mgr(seq_len)
+            # TIMEIT: 0.1% (CPU)
             mask = self.casual_mask(tokens)  # mask: [bs, seq, seq]
 
         # tokens: [bs, seq/1]
@@ -208,8 +208,13 @@ class LlamaModel(LlamaPreTrainedModel):
         h = self.reshape(h, (bs, seq_len, self.hidden_size))
         # h: [bs, seq/1, hidden_dim]
         for i in range(self.num_layers):
-            h = self.layers[i](h, freqs_cis, mask, batch_valid_length=batch_valid_length, block_tables=block_tables,
-                               slot_mapping=slot_mapping)
+            # TIMEIT: 99.9% (CPU)
+            h = self.layers[i](
+                h, freqs_cis, mask,
+                batch_valid_length=batch_valid_length,
+                block_tables=block_tables,
+                slot_mapping=slot_mapping
+            )
         output = self.norm_out(h)
         return output
 
@@ -336,6 +341,7 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
             layer.attention.infer_attention.add_flags(is_first_iteration=is_first_iteration)
 
     # pylint: disable=W0613
+    #@profile
     def construct(self, input_ids, labels=None, input_position=None, position_ids=None, attention_mask=None,
                   input_embeds=None, init_reset=True, batch_valid_length=None, batch_index=None, zactivate_len=None,
                   block_tables=None, slot_mapping=None):
@@ -358,6 +364,14 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
         Returns:
             Tensor: The loss or (logits, tokens, input_mask) of the network.
         """
+        if int(os.getenv('RUN_LEVEL', 99)) <= 6:
+            tokens = input_ids
+            B, L = tokens.shape
+            D = self.lm_head.weight.shape[0]
+            logits = F.rand([B, D], dtype=mstype.float32)
+            input_mask = self.cast(self.not_equal(tokens, self.pad_token_id), mstype.float32)
+            return logits, tokens, input_mask
+
         bsz, seqlen = self.shape(input_ids)
         if self.use_past:
             if not isinstance(batch_valid_length, Tensor):
@@ -371,16 +385,13 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
         if not self.is_first_iteration:
             batch_valid_length = self.sub_batch_valid_len(batch_valid_length, 1)
 
-        if DEBUG_WIN:
-            B, L = tokens.shape
-            D = self.lm_head.weight.shape[0]
-            logits = F.rand([B, D], dtype=self.lm_head.weight.dtype)
-        else:
-            output = self.model(tokens, batch_valid_length, batch_index, zactivate_len, block_tables, slot_mapping)
-            pre_gather = (not self.use_past or self.is_first_iteration) and batch_valid_length is not None
-            if pre_gather:
-                output = self.gather(output, self.sub_batch_valid_len(batch_valid_length, 1), 1)
-            logits = self.lm_head(output)
+        # TIMEIT: 96.8% (CPU)
+        output = self.model(tokens, batch_valid_length, batch_index, zactivate_len, block_tables, slot_mapping)
+        pre_gather = (not self.use_past or self.is_first_iteration) and batch_valid_length is not None
+        if pre_gather:
+            output = self.gather(output, self.sub_batch_valid_len(batch_valid_length, 1), 1)
+        # TIMEIT: 3.1% (CPU)
+        logits = self.lm_head(output)
 
         input_mask = self.cast(self.not_equal(tokens, self.pad_token_id), mstype.float32)
         if labels is None:

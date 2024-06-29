@@ -2,15 +2,6 @@
 
 # meta
 .vscode/
-.idea/
-.gitee/
-.jenkins/
-.ipynb_checkpoints/
-
-# build
-build/
-*.egg-info
-dist/
 
 # doc
 doc/
@@ -19,15 +10,14 @@ docs/
 # ouputs & logs
 output/
 kernel_meta/
-*.log
 performance_serving/testLog/
 performance_serving/result_*.json
-tmp/
 
 # data
-performance_serving/alpaca_*.json
 file_npy_base/*
+file_npy/*
 
 # model ckpt
+checkpoint_download/
+mindformers/checkpoint_download/
 llm-serving/checkpoint_download/
-performance_serving/tokenizer.model

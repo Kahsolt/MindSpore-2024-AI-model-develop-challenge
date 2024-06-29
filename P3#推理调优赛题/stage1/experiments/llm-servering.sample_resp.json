@@ -1,0 +1,363 @@
+{
+   "generated_text":"it's the only city in China where I don't feel like I have to be careful. I've been to Shanghai and Guangzhou, and they're both beautiful cities, but they feel like they're on a tightrope.",
+   "finish_reason":"length",
+   "generated_tokens":56,
+   "prefill":[
+      {
+         "id":372,
+         "logprob":17.203125,
+         "special":false,
+         "text":"it"
+      }
+   ],
+   "seed":0,
+   "tokens":[
+      {
+         "id":372,
+         "logprob":17.203125,
+         "special":false,
+         "text":"it"
+      },
+      {
+         "id":29915,
+         "logprob":16.015625,
+         "special":false,
+         "text":"'"
+      },
+      {
+         "id":29879,
+         "logprob":22.75,
+         "special":false,
+         "text":"s"
+      },
+      {
+         "id":278,
+         "logprob":15.171875,
+         "special":false,
+         "text":" the"
+      },
+      {
+         "id":871,
+         "logprob":16.3125,
+         "special":false,
+         "text":" only"
+      },
+      {
+         "id":4272,
+         "logprob":18.765625,
+         "special":false,
+         "text":" city"
+      },
+      {
+         "id":297,
+         "logprob":19.984375,
+         "special":false,
+         "text":" in"
+      },
+      {
+         "id":7551,
+         "logprob":21.625,
+         "special":false,
+         "text":" China"
+      },
+      {
+         "id":988,
+         "logprob":19.984375,
+         "special":false,
+         "text":" where"
+      },
+      {
+         "id":306,
+         "logprob":13.5,
+         "special":false,
+         "text":" I"
+      },
+      {
+         "id":1016,
+         "logprob":17.578125,
+         "special":false,
+         "text":" don"
+      },
+      {
+         "id":29915,
+         "logprob":22.265625,
+         "special":false,
+         "text":"'"
+      },
+      {
+         "id":29873,
+         "logprob":21.6875,
+         "special":false,
+         "text":"t"
+      },
+      {
+         "id":4459,
+         "logprob":18.859375,
+         "special":false,
+         "text":" feel"
+      },
+      {
+         "id":763,
+         "logprob":17.09375,
+         "special":false,
+         "text":" like"
+      },
+      {
+         "id":306,
+         "logprob":18.859375,
+         "special":false,
+         "text":" I"
+      },
+      {
+         "id":505,
+         "logprob":19.140625,
+         "special":false,
+         "text":" have"
+      },
+      {
+         "id":304,
+         "logprob":17.53125,
+         "special":false,
+         "text":" to"
+      },
+      {
+         "id":367,
+         "logprob":17.03125,
+         "special":false,
+         "text":" be"
+      },
+      {
+         "id":16010,
+         "logprob":14.1875,
+         "special":false,
+         "text":" careful"
+      },
+      {
+         "id":29889,
+         "logprob":20.734375,
+         "special":false,
+         "text":"."
+      },
+      {
+         "id":306,
+         "logprob":16.078125,
+         "special":false,
+         "text":" I"
+      },
+      {
+         "id":29915,
+         "logprob":15.953125,
+         "special":false,
+         "text":"'"
+      },
+      {
+         "id":345,
+         "logprob":23.78125,
+         "special":false,
+         "text":"ve"
+      },
+      {
+         "id":1063,
+         "logprob":15.8828125,
+         "special":false,
+         "text":" been"
+      },
+      {
+         "id":304,
+         "logprob":15.0234375,
+         "special":false,
+         "text":" to"
+      },
+      {
+         "id":27468,
+         "logprob":16.796875,
+         "special":false,
+         "text":" Shang"
+      },
+      {
+         "id":23535,
+         "logprob":22.40625,
+         "special":false,
+         "text":"hai"
+      },
+      {
+         "id":322,
+         "logprob":20.703125,
+         "special":false,
+         "text":" and"
+      },
+      {
+         "id":2088,
+         "logprob":17.234375,
+         "special":false,
+         "text":" Gu"
+      },
+      {
+         "id":574,
+         "logprob":25.65625,
+         "special":false,
+         "text":"ang"
+      },
+      {
+         "id":29920,
+         "logprob":23.53125,
+         "special":false,
+         "text":"z"
+      },
+      {
+         "id":10774,
+         "logprob":23.0,
+         "special":false,
+         "text":"hou"
+      },
+      {
+         "id":29892,
+         "logprob":22.265625,
+         "special":false,
+         "text":","
+      },
+      {
+         "id":322,
+         "logprob":18.390625,
+         "special":false,
+         "text":" and"
+      },
+      {
+         "id":896,
+         "logprob":14.078125,
+         "special":false,
+         "text":" they"
+      },
+      {
+         "id":29915,
+         "logprob":19.453125,
+         "special":false,
+         "text":"'"
+      },
+      {
+         "id":276,
+         "logprob":26.21875,
+         "special":false,
+         "text":"re"
+      },
+      {
+         "id":1716,
+         "logprob":14.53125,
+         "special":false,
+         "text":" both"
+      },
+      {
+         "id":9560,
+         "logprob":14.1484375,
+         "special":false,
+         "text":" beautiful"
+      },
+      {
+         "id":14368,
+         "logprob":20.65625,
+         "special":false,
+         "text":" cities"
+      },
+      {
+         "id":29892,
+         "logprob":22.796875,
+         "special":false,
+         "text":","
+      },
+      {
+         "id":541,
+         "logprob":20.9375,
+         "special":false,
+         "text":" but"
+      },
+      {
+         "id":896,
+         "logprob":16.734375,
+         "special":false,
+         "text":" they"
+      },
+      {
+         "id":4459,
+         "logprob":17.703125,
+         "special":false,
+         "text":" feel"
+      },
+      {
+         "id":763,
+         "logprob":16.78125,
+         "special":false,
+         "text":" like"
+      },
+      {
+         "id":896,
+         "logprob":16.0625,
+         "special":false,
+         "text":" they"
+      },
+      {
+         "id":29915,
+         "logprob":20.484375,
+         "special":false,
+         "text":"'"
+      },
+      {
+         "id":276,
+         "logprob":25.234375,
+         "special":false,
+         "text":"re"
+      },
+      {
+         "id":373,
+         "logprob":15.3828125,
+         "special":false,
+         "text":" on"
+      },
+      {
+         "id":263,
+         "logprob":14.9765625,
+         "special":false,
+         "text":" a"
+      },
+      {
+         "id":19932,
+         "logprob":14.625,
+         "special":false,
+         "text":" tight"
+      },
+      {
+         "id":307,
+         "logprob":20.078125,
+         "special":false,
+         "text":"ro"
+      },
+      {
+         "id":412,
+         "logprob":27.078125,
+         "special":false,
+         "text":"pe"
+      },
+      {
+         "id":29889,
+         "logprob":20.46875,
+         "special":false,
+         "text":"."
+      },
+      {
+         "id":887,
+         "logprob":14.453125,
+         "special":true,
+         "text":""
+      }
+   ],
+   "top_tokens":[
+      [
+         {
+            "id":372,
+            "logprob":17.203125,
+            "special":false,
+            "text":"it"
+         }
+      ]
+   ],
+   "details":null
+}

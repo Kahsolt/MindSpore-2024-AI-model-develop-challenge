@@ -46,7 +46,7 @@ train_dataset: &train_dataset
   num_parallel_workers: 8
   python_multiprocessing: False
   drop_remainder: True
-  batch_size: 1
+  batch_size: 6
   repeat: 1
   numa_enable: False
   prefetch_size: 1
@@ -104,8 +104,8 @@ recompute_config:
   recompute: False
   select_recompute: False
   parallel_optimizer_comm_recompute: False
-  mp_comm_recompute: False
-  recompute_slice_activation: False
+  mp_comm_recompute: True
+  recompute_slice_activation: True
 
 # callbacks
 callbacks:
@@ -119,12 +119,12 @@ callbacks:
 
 # mindspore context init config
 context:
-  mode: 1 #0--Graph Mode; 1--Pynative Mode
-  device_target: "CPU"
+  mode: 0 #0--Graph Mode; 1--Pynative Mode
+  device_target: "Ascend"
   enable_graph_kernel: False
   graph_kernel_flags: "--disable_expand_ops=Softmax,Dropout --enable_parallel_fusion=true --reduce_fuse_depth=8 --enable_auto_tensor_inplace=true"
   max_call_depth: 10000
-  max_device_memory: "28GB"
+  max_device_memory: "58GB"
   save_graphs: False
   save_graphs_path: "./graph"
   device_id: 0
@@ -150,20 +150,20 @@ model:
     softmax_compute_type: "float16"
     rotary_dtype: "float16"
     param_init_type: "float16"
-    use_past: false         # Windows debug has no PagedAttn
-    scaling_factor: 1.0     # The scale factor of seq length
-    extend_method: "None"   # support "None", "PI", "NTK"
-    # use_flash_attention: True # FA can accelerate training or finetune
+    use_past: True
+    scaling_factor: 1.0 # The scale factor of seq length
+    extend_method: "None" # support "None", "PI", "NTK"
+    use_flash_attention: True # FA can accelerate training or finetune
     block_size: 16
     num_blocks: 1024
     is_dynamic: True
     offset: 0
-    checkpoint_name_or_path: "../mindformers/checkpoint_download/llama2/llama2_7b.ckpt"
+    checkpoint_name_or_path: "llama2_7b"
     repetition_penalty: 1
     max_decode_length: 512
     top_k: 3
     top_p: 1
-    do_sample: True
+    do_sample: False
   arch:
     type: LlamaForCausalLM
 
@@ -179,7 +179,7 @@ processor:
 
 # metric
 metric:
-  type: PerplexityMetric
+  type: EmF1Metric
 
 # wrapper cell config
 runner_wrapper:

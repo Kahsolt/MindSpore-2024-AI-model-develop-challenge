@@ -239,6 +239,7 @@ class LLamaAttention(nn.Cell):
                                                       dp=parallel_config.data_parallel,
                                                       mp=parallel_config.model_parallel)
 
+    #@profile
     def construct(self, x: Tensor, freqs_cis: Tuple[Tensor, Tensor], mask=None, batch_valid_length=None,
                   block_tables=None, slot_mapping=None):
         """Forward process of the MultiHeadAttention"""
@@ -250,24 +251,28 @@ class LLamaAttention(nn.Cell):
             bs_seq = x.shape[0]
             qkv = self.cast(self.w(x), self.dtype)
             query = self.slice_qkv(qkv, (0, 0), (bs_seq, self.hidden_size), (1, 1))
-            key = self.slice_qkv(qkv, (0, self.hidden_size),
-                                 (bs_seq, self.hidden_size + self.kv_dim), (1, 1))
-            value = self.slice_qkv(qkv, (0, self.hidden_size + self.kv_dim),
-                                   (bs_seq, self.hidden_size + self.kv_dim * 2), (1, 1))
-        else:
+            key   = self.slice_qkv(qkv, (0, self.hidden_size), (bs_seq, self.hidden_size + self.kv_dim), (1, 1))
+            value = self.slice_qkv(qkv, (0, self.hidden_size + self.kv_dim), (bs_seq, self.hidden_size + self.kv_dim * 2), (1, 1))
+        else:   # <- this way
+            # TIMEIT: 24.1% (CPU)
             query = self.cast(self.wq(x), self.dtype)  # dp, 1 -> dp, mp
-            key = self.cast(self.wk(x), self.dtype)  # dp, 1 -> dp, mp
+            # TIMEIT: 23.3% (CPU)
+            key   = self.cast(self.wk(x), self.dtype)  # dp, 1 -> dp, mp
+            # TIMEIT: 23.3% (CPU)
             value = self.cast(self.wv(x), self.dtype)  # dp, 1 -> dp, mp
 
         # key and value for current token(s)
         if self.use_past:
             freqs_cos, freqs_sin, _ = freqs_cis
-            context_layer = self.infer_attention(query, key, value, batch_valid_length, block_tables, slot_mapping,
-                                                 freqs_cos, freqs_sin, mask)
+            context_layer = self.infer_attention(query, key, value, batch_valid_length, block_tables, slot_mapping, freqs_cos, freqs_sin, mask)
         else:
+            # TIMEIT: 0.2% (CPU)
             query = self.transpose(self.reshape(query, (bs, seq_len, self.n_head, self.head_dim)), (0, 2, 1, 3))
-            key = self.transpose(self.reshape(key, (bs, seq_len, self.n_kv_head, self.head_dim)), (0, 2, 1, 3))
+            # TIMEIT: 0.1% (CPU)
+            key   = self.transpose(self.reshape(key, (bs, seq_len, self.n_kv_head, self.head_dim)), (0, 2, 1, 3))
+            # TIMEIT: 0.1% (CPU)
             value = self.transpose(self.reshape(value, (bs, seq_len, self.n_kv_head, self.head_dim)), (0, 2, 1, 3))
+            # TIMEIT: 3.4% (CPU)
             query, key = self.apply_rotary_emb(query, key, freqs_cis)  # dp, mp, 1, 1
             if self.use_flash_attention:
                 context_layer = self.flash_attention(query, key, value, mask)
@@ -275,10 +280,13 @@ class LLamaAttention(nn.Cell):
             else:
                 key = self._repeat_kv(key, self.n_rep)
                 value = self._repeat_kv(value, self.n_rep)
+                # TIMEIT: 2.2% (CPU)
                 context_layer = self._attn(query, key, value, mask)
 
         # [bs, seq/1, hidden_dim] or [bs * seq/1, hidden_dim]
+        # TIMEIT: 23.2% (CPU)
         output = self.wo(context_layer)  # dp, mp -> dp, 1 / dp * mp, 1
+        # TIMEIT: 0.1% (CPU)
         output = self.cast(output, ori_dtype)
         return output
 
@@ -496,6 +504,7 @@ class LLamaDecodeLayer(nn.Cell):
             if moe_config is None or not moe_config.expert_num > 1:
                 self.feed_forward.w2.shard(((dp, mp), (1, mp)), out_strategy_matmul=((dp * mp, 1),))
 
+    #@profile
     def construct(self, x, freqs_cis, mask=None, batch_valid_length=None, block_tables=None, slot_mapping=None):
         """ Forward of transformer block. """
         if not self.use_past:
@@ -503,14 +512,20 @@ class LLamaDecodeLayer(nn.Cell):
         if batch_valid_length is not None:
             batch_valid_length = self.batch_valid_length_add(batch_valid_length, 1)
         # [bs, seq/1, hidden_dim]
+        # TIMEIT: 0.6% (CPU)
         input_x = self.attention_norm(x)
         # [bs, seq/1, hidden_dim]
+        # TIMEIT: 33.0% (CPU)
         h = self.attention(input_x, freqs_cis, mask, batch_valid_length, block_tables, slot_mapping)
+        # TIMEIT: 0.1% (CPU)
         h = self.add(x, h)
+        # TIMEIT: 0.5% (CPU)
         ffn_norm = self.ffn_norm(h)
         # [bs, seq/1, hidden_dim]
+        # TIMEIT: 65.7% (CPU)
         ffn_out = self.feed_forward(ffn_norm)
         # [bs, seq/1, hidden_dim] or [bs * seq/1, hidden_dim]
+        # TIMEIT: 0.1% (CPU)
         out = self.add(h, ffn_out)
         return out
 

@@ -1,3 +1,4 @@
+import os
 import time
 import logging
 from typing import List
@@ -12,7 +13,7 @@ from mindspore_serving.models.build_inputs import build_inputs
 # class worker
 class Worker:
     def __init__(self, config: ServingConfig) -> None:
-        self.model = DisModel()
+        self.model: DisModel = DisModel()
         self.config = config
         self.shms = []
         self.shm_names = []
@@ -23,6 +24,7 @@ class Worker:
         self.vocab_size = config.model_config.vocab_size
         self.seq_length_list = config.model_config.seq_length
         self.extra_func = build_inputs(config.extra_inputs, module_type='extra_inputs')
+
         # 0 : input_ids, current_index, valid_length, init_reset
         # 1 : mask=mask,
         # 2 : freq_cos
@@ -32,7 +34,6 @@ class Worker:
         # 6 : logprob
 		# 7 : block table # 128个slot组成一个block
         # 8 : slot mapping #
-
         shm_name_num = 9 if self.config.model_config.page_attention else 7  # 根据模型分配
         for i in range(shm_name_num):
             tmp = shared_memory.SharedMemory(create=True, size=1024 * 1024 * 1024)
@@ -123,8 +124,8 @@ class Worker:
         # For first graph, not_init should be false
         init_true = True
         init = init_true and not is_prefill
-
         logging.info("pre-process time is {} ".format((time.time() - time_start) * 1000))
+
         mask_time = time.time()
         extra_input_list = self.extra_func.get_extra_inputs(input_ids, self.current_index, init, is_prefill,
                                                             self.valid_length,
@@ -132,6 +133,7 @@ class Worker:
         if extra_input_list is None:
             logging.error('extra inputs by customer is None,please check it in server config!')
         logging.info("mask time is {} ".format((time.time() - mask_time) * 1000))
+
         # Call a single inference with input size of (bs, seq_length)
         call = time.time()
         result, shm = self.model.call(self.shms, np.array(input_ids, np.int32), self.current_index,
@@ -176,6 +178,9 @@ class Worker:
         return parms
 
     def predict(self, current_batch_size, entry_metadata_list: List[EntryMetaData]):
+        if int(os.getenv('RUN_LEVEL', 99)) <= 2:
+            return [(0, 0.0)]
+
         if_prefill = entry_metadata_list[0].is_prompt
         inputs_ids = []  # length is batch size
         valid_batch_flag = []
@@ -192,8 +197,7 @@ class Worker:
                 valid_batch_flag.append(0)
         generate_parms = self.get_generate_parms(self.config.model_config.page_attention, entry_metadata_list)
         current_batch_size_dyn = current_batch_size
-        outputs = self._predict(inputs_ids, if_prefill, valid_batch_flag, current_batch_size=current_batch_size_dyn,
-                                **generate_parms)
+        outputs = self._predict(inputs_ids, if_prefill, valid_batch_flag, current_batch_size=current_batch_size_dyn, **generate_parms)
 
         return outputs
 

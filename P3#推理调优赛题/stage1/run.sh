@@ -12,24 +12,17 @@ curl 127.0.0.1:8835/models/llama2/generate \
   -d '{"inputs":" I love Beijing, because","parameters":{"max_new_tokens":56, "do_sample":"True", "return_full_text":"True"}, "stream":"True"}' \
   -H 'Content-Type: application/json'
 
+
 # run performance_serving
 cd /home/ma-user/work/performance_serving/
 
-# test task 1
-python test_serving_performance.py --task 1 -X 1 -T 5
+# test task 1 (--task should match with examples/start.py)
 python test_serving_performance.py --task 1 -X 0.5 -T 3000
 
-# TODO: kill, reconfigure and restart llm-serving!!
-ps -elf | grep python
-kill -9 xxx
-# swap filename under llm-serving\mindspore_serving\agent
-#   - `agent_multi_post_method_save_logits.py`
-#   - `agent_multi_post_method.py`
-
-# test task 2
-python test_serving_performance.py --task 2 -X 0.2 -T 25
+# test task 2 (--task should match with examples/start.py)
 python test_serving_performance.py --task 2 -X 0.1 -T 5000
 
 
-# you can modify `test.sh`, then run with nohup for these two task!!
-nohup sh test.sh > task1.log 2>&1 &
+# test precision
+cd /home/ma-user/work/
+python acc_allclose.py --base_path file_npy_base --new_path file_npy

@@ -7,6 +7,7 @@ import logging
 import time
 import psutil
 import os
+import yaml
 import numpy as np
 from concurrent.futures import ThreadPoolExecutor, as_completed, wait
 from multiprocessing import Process, shared_memory
@@ -23,6 +24,7 @@ from mindspore_serving.config.config import ServingConfig
 from mindspore_serving.models.build_inputs import build_inputs
 
 import mindspore
+import mindspore.ops.functional as F
 from mindformers import AutoConfig, AutoModel
 from tools.post_sampling_model import temperature_TopK, ArgmaxPost
 
@@ -35,19 +37,34 @@ device = 'CPU' if sys.platform == 'win32' else 'Ascend'
 pool = ThreadPoolExecutor(max_workers=20, thread_name_prefix='test_thread')
 
 
+def need_load_ckpt(model_cfg_path:str) -> bool:
+    # run level high enough
+    run_lv_pass = int(os.getenv('RUN_LEVEL', 99)) > 100
+    if not run_lv_pass: return False
+    # file exists
+    with open(model_cfg_path, 'r', encoding='utf-8') as fh:
+        cfg = yaml.safe_load(fh)
+        ckpt_exists = os.path.exists(cfg['model']['model_config']['checkpoint_name_or_path'])
+    if not ckpt_exists: return False
+    return True
+
+
 def load_model_for_kbk(cfg: ServingConfig, rank_id: int, device_id: int):
     # 加载模型
     model_config = cfg.model_config
     logging.info(f"load model {model_config.model_name} in rank {rank_id} start.")
 
+    model = None
     if DEBUG_WIN:
-        mindspore.set_context(mode=mindspore.PYNATIVE_MODE, device_id=device_id, device_target=device)
-        model = AutoModel.from_config(model_config.model_cfg_path, download_checkpoint=False)
+        if int(os.getenv('RUN_LEVEL', 99)) > 5:
+            mindspore.set_context(mode=mindspore.PYNATIVE_MODE, device_id=device_id, device_target=device)
+            load_ckpt = need_load_ckpt(model_config.model_cfg_path)
+            model = AutoModel.from_config(model_config.model_cfg_path, download_checkpoint=load_ckpt)
     else:
         # 0: mindspore.GRAPH_MODE, 1: mindspore.PYNATIVE_MODE
         mindspore.set_context(mode=mindspore.GRAPH_MODE, device_id=device_id, device_target=device)
         model = AutoModel.from_config(model_config.model_cfg_path)
-    model.set_train(False)
+    if model: model.set_train(False)
 
     logging.info(f"load model {model_config.model_name} in rank {rank_id} end.")
     return model
@@ -447,7 +464,8 @@ class WorkAgent:
             do_sample = self.decode_params_map[decode_index[0]].do_sample
         return do_sample
 
-    def do_post_sampling(self, outputs_np, outputs_shm, output_logprob_shm, decode_index, prefill=True):
+    def do_post_sampling(self, outputs_np:Tensor, outputs_shm, output_logprob_shm, decode_index, prefill=True):
+        # logits to (sampled) token_id
         logging.info("do_post_sampling outputs_np type is {}, value is {}".format(outputs_np.dtype, outputs_np))
         do_sample = self.get_consistent_batch(decode_index)
         if self.config.model_config.backend == "ge":
@@ -464,7 +482,7 @@ class WorkAgent:
                 else:
                     target = self._post_sampling_topk_npu(outputs_np, decode_index, prefill)
             output_info = outputs_np.get_data_to_numpy()
-        else:
+        else:   # "kbk"
             if not do_sample:
                 self.targets.clear()
                 target = self.argmax_model(outputs_np)
@@ -474,6 +492,7 @@ class WorkAgent:
                 target = target.asnumpy()
             output_info = outputs_np.asnumpy()
 
+        # Write to shared_mem
         logging.info("do_post_sampling target type is {}, value is {}".format(target.dtype, target))
         logging.info("do_post_sampling output_info type is {}, value is {}".format(output_info.dtype, output_info))
         if self.rank_id == 0:
@@ -485,8 +504,7 @@ class WorkAgent:
                     logprob_list = []
                     for idx, tag in enumerate(target):
                         logprob_list.append(output_info[idx][int(tag)])
-                    tmp_logprob = np.ndarray((index + self.current_batch_size,), dtype=np.float64,
-                                             buffer=output_logprob_shm.buf)
+                    tmp_logprob = np.ndarray((index + self.current_batch_size,), dtype=np.float64, buffer=output_logprob_shm.buf)
                     tmp_logprob[index: index + self.current_batch_size] = logprob_list[:]
                     self.targets[index: index + self.current_batch_size] = target[:]
             else:
@@ -514,6 +532,9 @@ class WorkAgent:
         return decode_model_map[model_index]
 
     def predict(self, shape_list=None, current_batch=None, batch_valid_flag=None):
+        if int(os.getenv('RUN_LEVEL', 99)) <= 4:
+            return None, None
+
         self.status = AgentStatus.busy
         tmp_shms = []
         start_time = time.time()
@@ -526,6 +547,7 @@ class WorkAgent:
         gen_params_id = 4
         gen_params_shm = shared_memory.SharedMemory(name=self.shm_names[gen_params_id])
         tmp_shms.append(gen_params_shm)
+
         if self.is_prefill:
             first_group = np.ndarray((shape_list[0]), dtype=np.int32, buffer=existing_shm0.buf)
             current_index_ = first_group[:, shape_list[0][1] - 3: shape_list[0][1] - 2]
@@ -696,7 +718,7 @@ class WorkAgent:
                 logging.debug("item is {}".format(tmp))
 
             outputs = self.predict_for_ge(extra_input, start_time, tmp_in)
-        else:
+        else:   # "kbk"
             seq_length = self._get_seq_length(input_ids, False)
             # init kbk_targets, shape(current_batch, seq_length), default value: self.config.model_config.pad_token_id
             if self.kbk_targets is None:
@@ -771,7 +793,10 @@ class WorkAgent:
         outputs = outputs_list[0]
         return outputs
 
-    def predict_for_kbk(self, current_index, input_ids, valid_length, block_tables, slot_mapping):
+    def predict_for_kbk(self, current_index, input_ids, valid_length, block_tables, slot_mapping) -> Tensor:
+        if int(os.getenv('RUN_LEVEL', 99)) <= 5:
+            return F.rand([1, 32000], dtype=mindspore.float32)
+
         # 封装调用模型参数
         model_kwargs = {"current_index": current_index}
         model_inputs = self.mindspore_model.prepare_inputs_for_generation(input_ids, **model_kwargs)

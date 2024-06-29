@@ -44,8 +44,18 @@ export GRAPH_OP_RUN=1
 export MS_ENABLE_INTERNAL_KERNELS=on
 echo $PYTHONPATH
 
+# make aliases
+alias cls=clear
+alias copy=cp
+alias move=mv
+alias ren=mv
+alias cd=pushd
+alias po=popd
+alias py=python
+alias k9='kill -9'
+
 # install dependencies
-cd llm-serving/
+cd /home/ma-user/work/llm-serving/
 pip install -r requirement.txt
 pip install tiktoken
 

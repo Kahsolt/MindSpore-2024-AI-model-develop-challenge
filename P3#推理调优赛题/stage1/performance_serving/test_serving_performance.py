@@ -176,7 +176,7 @@ class LargeModelClient:
                 resp_list.append(line)
         res_time = time.time() - start_time
 
-        parse = lambda resp: json.loads(resp)["data"][0]["generated_text"]
+        parse = lambda resp: json.loads(resp)["data"]["generated_text"]
         if return_full_text:
             resp_text = parse(resp_last)
         else:

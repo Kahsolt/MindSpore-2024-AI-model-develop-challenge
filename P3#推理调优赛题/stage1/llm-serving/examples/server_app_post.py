@@ -224,7 +224,7 @@ async def get_stream_res_sse(request, results): # <- step 3
                 "top_tokens": [
                     res_list
                 ]
-            },
+            }
             ret = {
                 "event": "message",
                 "retry": 30000,
@@ -246,7 +246,7 @@ async def get_stream_res_sse(request, results): # <- step 3
             "top_tokens": [
                 [tokens_list[0]]
             ]
-        },
+        }
         ret = {
             "event": "message",
             "retry": 30000,
@@ -257,9 +257,6 @@ async def get_stream_res_sse(request, results): # <- step 3
 
 def send_request(request: ClientRequest):       # <- step 2
     print('request: ', request)
-
-    if os.getenv('FAKE_LLM_SERVING'):
-        return 
 
     if config.model_config.model_name == 'internlm_7b':
         request.inputs = INTERNLM_PROMPT_FORMAT.format(request.inputs)
@@ -359,6 +356,16 @@ async def async_full_generator(request: ClientRequest):
 
 @app.post("/models/llama2/generate_stream")     # <- step 1
 async def async_stream_generator(request: ClientRequest):
+    if int(os.getenv('RUN_LEVEL', 99)) <= 1:
+        async def get_stream_res_sse_dummy():
+            yield json.dumps({"data": {'generated_text':'fake'}}).encode("utf-8")
+        return EventSourceResponse(
+            get_stream_res_sse_dummy(),
+            media_type="text/event-stream",
+            ping_message_factory=lambda: ServerSentEvent(**{"comment": "You can't see this ping"}),
+            ping=600
+        )
+
     results = send_request(request)
     if request.parameters.return_protocol == "sse":
         print('get_stream_res_sse...')

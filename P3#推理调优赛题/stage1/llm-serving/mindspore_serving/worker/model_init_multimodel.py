@@ -420,6 +420,12 @@ class DisModel:
     def call(self, shms: List, input_ids, current_index,
              valid_length, init_reset, is_first_iteration, valid_batch_flag, extra_inputs=None,
              current_batch_size=None, **kwargs):
+        if int(os.getenv('RUN_LEVEL', 99)) <= 3:
+            result = []
+            for _ in kwargs.get("decode_index_list"):
+                result.append((0, 0.0))
+            return result, 1
+
         """kvcache infer"""
         time_start = time.time()
         logging.debug("is prefill {}".format(is_first_iteration))
@@ -515,7 +521,7 @@ class DisModel:
             print("--------------------predict failed, abandon current prompt, please try again----------------")
             logging.error("predict failed, abandon current prompt, please try again")
             return result, 1
-        for decode_index in decode_index_list:
+        for decode_index in decode_index_list:  # FIXME: 这一段看求不懂啊
             tmp = np.ndarray((decode_index + 1,), dtype=np.int32, buffer=shms[5].buf)
             tmp_logprob = np.ndarray((decode_index + 1,), dtype=np.float64, buffer=shms[6].buf)
             result.append((int(tmp[decode_index:decode_index + 1]), float(tmp_logprob[decode_index:decode_index + 1])))

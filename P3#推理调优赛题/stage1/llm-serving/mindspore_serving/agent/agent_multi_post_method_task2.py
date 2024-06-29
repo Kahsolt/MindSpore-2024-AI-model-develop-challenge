@@ -26,13 +26,14 @@ class WorkAgent(WorkAgentBase):
             logging.debug(f"predict before pa predict_for_kbk.")
             if self.is_prefill:
                 self.mindspore_model.is_first_iteration = True
-            res, current_index = self.mindspore_model.forward(input_ids=input_ids,
-                                                    valid_length_each_example=valid_length,
-                                                    generation_config=self.mindspore_model.config,
-                                                    block_tables=block_tables,
-                                                    slot_mapping=slot_mapping,
-                                                    prefill=self.is_prefill,
-                                                    **model_kwargs)
+            res, current_index = self.mindspore_model.forward(
+                input_ids=input_ids,
+                valid_length_each_example=valid_length,
+                generation_config=self.mindspore_model.config,
+                block_tables=block_tables,
+                slot_mapping=slot_mapping,
+                prefill=self.is_prefill,
+                **model_kwargs)
             logging.info("use_past true mindspore_model res : %s;", res)
             logging.info("use_past true mindspore_model current_index : %s;", current_index)
         else:

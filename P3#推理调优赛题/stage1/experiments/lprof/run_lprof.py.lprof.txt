@@ -1,0 +1,352 @@
+Timer unit: 1e-06 s
+
+Total time: 0.610058 s
+File: C:\Workspace\@Contest\2024.06.06 昇思MindSpore模型开发挑战赛\P3#推理调优赛题\stage1\mindformers\mindformers\models\llama\llama_layer.py
+Function: construct at line 207
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   207                                               #@profile
+   208                                               def construct(self, xq: Tensor, xk: Tensor, freqs_cis):
+   209                                                   """Forward of rotary position embedding."""
+   210       192        446.9      2.3      0.1          original_type = xq.dtype
+   211                                                   # TIMEIT: 1.3% (CPU)
+   212       192       7741.9     40.3      1.3          xq = self.cast(xq, self.dtype)
+   213                                                   # TIMEIT: 1.1% (CPU)
+   214       192       6200.9     32.3      1.0          xk = self.cast(xk, self.dtype)
+   215                                                   # xq, xk: [bs, n_head/n_kv_head, seq/1, head_dim]
+   216       192         71.9      0.4      0.0          freqs_cos, freqs_sin, swap_mask = freqs_cis
+   217       192        147.6      0.8      0.0          mul = self.mul if self.is_first_iteration else self.mul_inc
+   218       192         98.1      0.5      0.0          if self.use_rope_slice:
+   219                                                       xq_out = self.add(mul(xq, freqs_cos), mul(self.slice_half(xq), freqs_sin))
+   220                                                       xk_out = self.add(mul(xk, freqs_cos), mul(self.slice_half(xk), freqs_sin))
+   221                                                   else:       # <- this way
+   222                                                       # TIMEIT: 53.3% (CPU)
+   223       192     330543.7   1721.6     54.2              xq_out = self.add(mul(xq, freqs_cos), mul(self.rotate_half(xq, swap_mask), freqs_sin))
+   224                                                       # TIMEIT: 40.7% (CPU)
+   225       192     243633.3   1268.9     39.9              xk_out = self.add(mul(xk, freqs_cos), mul(self.rotate_half(xk, swap_mask), freqs_sin))
+   226
+   227                                                   # TIMEIT: 2.0% (CPU)
+   228       192      12019.3     62.6      2.0          xq_out = self.cast(xq_out, original_type)
+   229                                                   # TIMEIT: 1.6% (CPU)
+   230       192       9071.1     47.2      1.5          xk_out = self.cast(xk_out, original_type)
+   231       192         83.4      0.4      0.0          return xq_out, xk_out
+
+
+Total time: 18.0594 s
+File: C:\Workspace\@Contest\2024.06.06 昇思MindSpore模型开发挑战赛\P3#推理调优赛题\stage1\mindformers\mindformers\models\llama\llama_transformer.py
+Function: construct at line 242
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   242                                               #@profile
+   243                                               def construct(self, x: Tensor, freqs_cis: Tuple[Tensor, Tensor], mask=None, batch_valid_length=None,
+   244                                                             block_tables=None, slot_mapping=None):
+   245                                                   """Forward process of the MultiHeadAttention"""
+   246       192        692.5      3.6      0.0          ori_dtype = x.dtype
+   247                                                   # [bs, seq/1, hidden_dim]
+   248       192       1251.7      6.5      0.0          bs, seq_len, _ = self.shape(x)
+   249       192        121.2      0.6      0.0          if self.qkv_concat:
+   250                                                       x = self.reshape(x, (-1, x.shape[-1]))
+   251                                                       bs_seq = x.shape[0]
+   252                                                       qkv = self.cast(self.w(x), self.dtype)
+   253                                                       query = self.slice_qkv(qkv, (0, 0), (bs_seq, self.hidden_size), (1, 1))
+   254                                                       key   = self.slice_qkv(qkv, (0, self.hidden_size), (bs_seq, self.hidden_size + self.kv_dim), (1, 1))
+   255                                                       value = self.slice_qkv(qkv, (0, self.hidden_size + self.kv_dim), (bs_seq, self.hidden_size + self.kv_dim * 2), (1, 1))
+   256                                                   else:   # <- this way
+   257                                                       # TIMEIT: 24.1% (CPU)
+   258       192    4364369.7  22731.1     24.2              query = self.cast(self.wq(x), self.dtype)  # dp, 1 -> dp, mp
+   259                                                       # TIMEIT: 23.3% (CPU)
+   260       192    4155963.7  21645.6     23.0              key   = self.cast(self.wk(x), self.dtype)  # dp, 1 -> dp, mp
+   261                                                       # TIMEIT: 23.3% (CPU)
+   262       192    4152450.1  21627.3     23.0              value = self.cast(self.wv(x), self.dtype)  # dp, 1 -> dp, mp
+   263
+   264                                                   # key and value for current token(s)
+   265       192        131.8      0.7      0.0          if self.use_past:
+   266                                                       freqs_cos, freqs_sin, _ = freqs_cis
+   267                                                       context_layer = self.infer_attention(query, key, value, batch_valid_length, block_tables, slot_mapping, freqs_cos, freqs_sin, mask)
+   268                                                   else:
+   269                                                       # TIMEIT: 0.2% (CPU)
+   270       192      37221.0    193.9      0.2              query = self.transpose(self.reshape(query, (bs, seq_len, self.n_head, self.head_dim)), (0, 2, 1, 3))
+   271                                                       # TIMEIT: 0.1% (CPU)
+   272       192      25263.9    131.6      0.1              key   = self.transpose(self.reshape(key, (bs, seq_len, self.n_kv_head, self.head_dim)), (0, 2, 1, 3))
+   273                                                       # TIMEIT: 0.1% (CPU)
+   274       192      23558.0    122.7      0.1              value = self.transpose(self.reshape(value, (bs, seq_len, self.n_kv_head, self.head_dim)), (0, 2, 1, 3))
+   275                                                       # TIMEIT: 3.4% (CPU)
+   276       192     636440.7   3314.8      3.5              query, key = self.apply_rotary_emb(query, key, freqs_cis)  # dp, mp, 1, 1
+   277       192        249.5      1.3      0.0              if self.use_flash_attention:
+   278                                                           context_layer = self.flash_attention(query, key, value, mask)
+   279                                                           context_layer = self._merge_heads(context_layer)
+   280                                                       else:
+   281       192        596.4      3.1      0.0                  key = self._repeat_kv(key, self.n_rep)
+   282       192        310.3      1.6      0.0                  value = self._repeat_kv(value, self.n_rep)
+   283                                                           # TIMEIT: 2.2% (CPU)
+   284       192     386048.6   2010.7      2.1                  context_layer = self._attn(query, key, value, mask)
+   285
+   286                                                   # [bs, seq/1, hidden_dim] or [bs * seq/1, hidden_dim]
+   287                                                   # TIMEIT: 23.2% (CPU)
+   288       192    4265073.9  22213.9     23.6          output = self.wo(context_layer)  # dp, mp -> dp, 1 / dp * mp, 1
+   289                                                   # TIMEIT: 0.1% (CPU)
+   290       192       9625.9     50.1      0.1          output = self.cast(output, ori_dtype)
+   291       192         72.5      0.4      0.0          return output
+
+
+Total time: 35.2909 s
+File: C:\Workspace\@Contest\2024.06.06 昇思MindSpore模型开发挑战赛\P3#推理调优赛题\stage1\mindformers\mindformers\models\llama\llama_layer.py
+Function: construct at line 470
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   470                                               #@profile
+   471                                               def construct(self, x):
+   472                                                   """Forward process of the FeedForward"""
+   473       192       5049.8     26.3      0.0          _check_input_dtype(F.dtype(x), "x", [mstype.float32, mstype.float16, mstype.bfloat16], self.cls_name)
+   474       192       9736.1     50.7      0.0          x = self.cast(x, self.dtype)
+   475                                                   # [bs, seq, hidden_dim] or [bs * seq, hidden_dim]
+   476                                                   # TIMEIT: 33.8% (CPU)
+   477       192   11928522.4  62127.7     33.8          gate = self.w1(x)  # dp,1 -> dp, mp
+   478                                                   # TIMEIT: 32.6% (CPU)
+   479       192   11441178.7  59589.5     32.4          hidden = self.w3(x)  # dp,1 -> dp, mp
+   480                                                   # TIMEIT: 0.3% (CPU)
+   481       192      89840.8    467.9      0.3          hidden = self.mul(hidden, gate)  # dp,mp -> dp, mp
+   482                                                   # TIMEIT: 33.4% (CPU)
+   483       192   11816524.8  61544.4     33.5          output = self.w2(hidden)  # dp,mp -> dp, 1
+   484       192         43.1      0.2      0.0          return output
+
+
+Total time: 54.1053 s
+File: C:\Workspace\@Contest\2024.06.06 昇思MindSpore模型开发挑战赛\P3#推理调优赛题\stage1\mindformers\mindformers\models\llama\llama_transformer.py
+Function: construct at line 507
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   507                                               #@profile
+   508                                               def construct(self, x, freqs_cis, mask=None, batch_valid_length=None, block_tables=None, slot_mapping=None):
+   509                                                   """ Forward of transformer block. """
+   510       192        165.1      0.9      0.0          if not self.use_past:
+   511       192      12577.4     65.5      0.0              self._check_input(x, freqs_cis, mask)
+   512       192         69.6      0.4      0.0          if batch_valid_length is not None:
+   513                                                       batch_valid_length = self.batch_valid_length_add(batch_valid_length, 1)
+   514                                                   # [bs, seq/1, hidden_dim]
+   515                                                   # TIMEIT: 0.6% (CPU)
+   516       192     329734.2   1717.4      0.6          input_x = self.attention_norm(x)
+   517                                                   # [bs, seq/1, hidden_dim]
+   518                                                   # TIMEIT: 33.0% (CPU)
+   519       192   18087741.2  94207.0     33.4          h = self.attention(input_x, freqs_cis, mask, batch_valid_length, block_tables, slot_mapping)
+   520                                                   # TIMEIT: 0.1% (CPU)
+   521       192      51581.3    268.7      0.1          h = self.add(x, h)
+   522                                                   # TIMEIT: 0.5% (CPU)
+   523       192     264668.5   1378.5      0.5          ffn_norm = self.ffn_norm(h)
+   524                                                   # [bs, seq/1, hidden_dim]
+   525                                                   # TIMEIT: 65.7% (CPU)
+   526       192   35315362.8 183934.2     65.3          ffn_out = self.feed_forward(ffn_norm)
+   527                                                   # [bs, seq/1, hidden_dim] or [bs * seq/1, hidden_dim]
+   528                                                   # TIMEIT: 0.1% (CPU)
+   529       192      43342.2    225.7      0.1          out = self.add(h, ffn_out)
+   530       192         68.3      0.4      0.0          return out
+
+
+Total time: 54.2624 s
+File: C:\Workspace\@Contest\2024.06.06 昇思MindSpore模型开发挑战赛\P3#推理调优赛题\stage1\mindformers\mindformers\models\llama\llama.py
+Function: construct at line 175
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   175                                               #@profile
+   176                                               def construct(self, tokens: Tensor, batch_valid_length=None, batch_index=None, zactivate_len=None,
+   177                                                             block_tables=None, slot_mapping=None):
+   178                                                   """
+   179                                                   Forward of llama model.
+   180
+   181                                                   Args:
+   182                                                       tokens: the tokenized inputs with datatype int32
+   183                                                       input_position(Tensor): current position, used by model.predict.
+   184                                                       init_reset(bool, optional): A bool tensor with shape [1], used to clear the past key parameter and
+   185                                                           past value parameter used in the incremental prediction. Default True.
+   186                                                       batch_valid_length(Tensor): the past calculated the index with datatype int32, used for incremental
+   187                                                           prediction. Tensor of shape :math:`(batch_size,)`. Default None.
+   188                                                       block_tables (Tensor[int64]): Store mapping tables for each sequence.
+   189                                                       slot_mapping (Tensor[int32]): Store token cache physical slot index.
+   190                                                   Returns:
+   191                                                       output: Tensor, the output of llama decoderlayer
+   192                                                   """
+   193                                                   # preprocess
+   194         6         22.5      3.8      0.0          bs, seq_len = self.shape(tokens)
+   195         6          1.5      0.2      0.0          mask = None
+   196         6          2.2      0.4      0.0          if self.use_past:
+   197                                                       if self.is_first_iteration:
+   198                                                           freqs_cis = self.freqs_mgr.prefill(bs, seq_len)
+   199                                                       else:
+   200                                                           freqs_cis = self.freqs_mgr.increment(batch_valid_length)
+   201                                                   else:
+   202         6       1651.7    275.3      0.0              freqs_cis = self.freqs_mgr(seq_len)
+   203                                                       # TIMEIT: 0.1% (CPU)
+   204         6      40237.7   6706.3      0.1              mask = self.casual_mask(tokens)  # mask: [bs, seq, seq]
+   205
+   206                                                   # tokens: [bs, seq/1]
+   207         6       8318.2   1386.4      0.0          h = self.cast(self.tok_embeddings(tokens), self.dtype)
+   208         6       5618.5    936.4      0.0          h = self.reshape(h, (bs, seq_len, self.hidden_size))
+   209                                                   # h: [bs, seq/1, hidden_dim]
+   210       198        165.0      0.8      0.0          for i in range(self.num_layers):
+   211                                                       # TIMEIT: 99.9% (CPU)
+   212       384   54198049.6 141140.8     99.9              h = self.layers[i](
+   213       192         88.2      0.5      0.0                  h, freqs_cis, mask,
+   214       192         64.5      0.3      0.0                  batch_valid_length=batch_valid_length,
+   215       192         57.6      0.3      0.0                  block_tables=block_tables,
+   216       192         57.4      0.3      0.0                  slot_mapping=slot_mapping
+   217                                                       )
+   218         6       8028.7   1338.1      0.0          output = self.norm_out(h)
+   219         6          2.0      0.3      0.0          return output
+
+
+Total time: 54.9924 s
+File: C:\Miniconda3\envs\llm\lib\site-packages\mindspore\nn\cell.py
+Function: _run_construct at line 473
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   473                                               def _run_construct(self, cast_inputs, kwargs):
+   474                                                   """Run the construct function"""
+   475                                                   if self._enable_forward_pre_hook:
+   476      2730       1793.6      0.7      0.0              cast_inputs = self._run_forward_pre_hook(cast_inputs)
+   477                                                   if self._enable_backward_hook:
+   478      2730       1345.5      0.5      0.0              output = self._backward_hook_construct(*cast_inputs, **kwargs)
+   479                                                   elif hasattr(self, "_shard_fn"):
+   480      2730      15994.1      5.9      0.0              output = self._shard_fn(*cast_inputs, **kwargs)
+   481                                                   else:
+   482                                                       output = self.construct(*cast_inputs, **kwargs)
+   483      2730   54969895.2  20135.5    100.0          if self._enable_forward_hook:
+   484      2730       2459.0      0.9      0.0              output = self._run_forward_hook(cast_inputs, output)
+   485                                                   return output
+
+
+Total time: 55.2518 s
+File: C:\Miniconda3\envs\llm\lib\site-packages\mindspore\nn\cell.py
+Function: __call__ at line 658
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   658                                                   if self.__class__.construct is Cell.construct:
+
+
+Total time: 56.0927 s
+File: C:\Workspace\@Contest\2024.06.06 昇思MindSpore模型开发挑战赛\P3#推理调优赛题\stage1\mindformers\mindformers\models\llama\llama.py
+Function: construct at line 344
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   344                                               #@profile
+   345                                               def construct(self, input_ids, labels=None, input_position=None, position_ids=None, attention_mask=None,
+   346                                                             input_embeds=None, init_reset=True, batch_valid_length=None, batch_index=None, zactivate_len=None,
+   347                                                             block_tables=None, slot_mapping=None):
+   348                                                   r"""
+   349                                                   LlamaForCausalLM forward.
+   350
+   351                                                   Args:
+   352                                                       input_ids(Tensor): the tokenized inputs with datatype int32, Tensor of shape :math:`(batch, seq\_length)`.
+   353                                                       labels(Tensor): the tokenized labels with datatype int32, Tensor of shape :math:`(batch, seq\_length)`.
+   354                                                       input_position(Tensor): current position, used by model.predict.
+   355                                                       position_ids(Tensor): Reserved param, not used.
+   356                                                       attention_mask(Tensor): Reserved param, not used.
+   357                                                       input_embeds(Tensor): Reserved param, not used.
+   358                                                       init_reset(bool, optional): A bool tensor with shape [1], used to clear the past key parameter and
+   359                                                           past value parameter used in the incremental prediction. Default True.
+   360                                                       batch_valid_length(Tensor): the past calculated the index with datatype int32, used for incremental
+   361                                                           prediction. Tensor of shape :math:`(batch_size,)`. Default None.
+   362                                                       block_tables (Tensor[int64]): Store mapping tables for each sequence.
+   363                                                       slot_mapping (Tensor[int32]): Store token cache physical slot index.
+   364                                                   Returns:
+   365                                                       Tensor: The loss or (logits, tokens, input_mask) of the network.
+   366                                                   """
+   367         6         42.4      7.1      0.0          if int(os.getenv('RUN_LEVEL', 99)) <= 6:
+   368                                                       tokens = input_ids
+   369                                                       B, L = tokens.shape
+   370                                                       D = self.lm_head.weight.shape[0]
+   371                                                       logits = F.rand([B, D], dtype=mstype.float32)
+   372                                                       input_mask = self.cast(self.not_equal(tokens, self.pad_token_id), mstype.float32)
+   373                                                       return logits, tokens, input_mask
+   374
+   375         6         30.3      5.0      0.0          bsz, seqlen = self.shape(input_ids)
+   376         6          3.0      0.5      0.0          if self.use_past:
+   377                                                       if not isinstance(batch_valid_length, Tensor):
+   378                                                           batch_valid_length = self.ones((bsz,), mstype.int32)
+   379         6          2.3      0.4      0.0          if self.training:
+   380                                                       tokens = self.slice(input_ids, (0, 0), (bsz, seqlen - 1), (1, 1))
+   381                                                   else:
+   382         6          1.3      0.2      0.0              tokens = input_ids
+   383         6          1.6      0.3      0.0          if batch_valid_length is not None:
+   384                                                       batch_valid_length = self.reshape(batch_valid_length, (-1,))
+   385         6          3.1      0.5      0.0          if not self.is_first_iteration:
+   386                                                       batch_valid_length = self.sub_batch_valid_len(batch_valid_length, 1)
+   387
+   388                                                   # TIMEIT: 96.8% (CPU)
+   389         6   54267344.2    9e+06     96.7          output = self.model(tokens, batch_valid_length, batch_index, zactivate_len, block_tables, slot_mapping)
+   390         6         19.2      3.2      0.0          pre_gather = (not self.use_past or self.is_first_iteration) and batch_valid_length is not None
+   391         6          2.7      0.5      0.0          if pre_gather:
+   392                                                       output = self.gather(output, self.sub_batch_valid_len(batch_valid_length, 1), 1)
+   393                                                   # TIMEIT: 3.1% (CPU)
+   394         6    1793852.4 298975.4      3.2          logits = self.lm_head(output)
+   395
+   396         6      15869.0   2644.8      0.0          input_mask = self.cast(self.not_equal(tokens, self.pad_token_id), mstype.float32)
+   397         6          4.8      0.8      0.0          if labels is None:
+   398         6        486.5     81.1      0.0              labels = self.slice(input_ids, (0, 1), (bsz, seqlen), (1, 1))
+   399                                                   else:
+   400                                                       if labels.ndim > 1:
+   401                                                           if self.training:
+   402                                                               labels = self.slice(labels, (0, 1), (bsz, seqlen), (1, 1))
+   403                                                           label_mask = self.cast(self.not_equal(labels, self.ignore_token_id), mstype.float32)
+   404                                                           input_mask = self.mul(input_mask, label_mask)
+   405
+   406         6          4.5      0.8      0.0          if not self.training:
+   407         6      15044.9   2507.5      0.0              logits = self.cast(logits, mstype.float32)
+   408         6          2.7      0.5      0.0              return logits, tokens, input_mask
+   409
+   410                                                   if logits.ndim > 2:
+   411                                                       logits = self.reshape(logits, (-1, logits.shape[-1]))
+   412                                                   logits = self.cast(logits, mstype.float32)
+   413                                                   labels = self.reshape(labels, (-1,))
+   414                                                   input_mask = self.reshape(input_mask, (-1,))
+   415                                                   loss = self.loss(logits, labels, input_mask)
+   416                                                   return loss
+
+
+Total time: 56.1236 s
+File: ./test_llama_infer_dummy.py
+Function: benchmark at line 47
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+    47                                           #@profile
+    48                                           def benchmark():
+    49                                             # warm up
+    50         1          0.6      0.6      0.0    TEST_SAMPLE = 'This is a simple bare test that runs for LLAMA model performance profiling :)'
+    51         1       1224.7   1224.7      0.0    inputs = tokenizer([TEST_SAMPLE], return_tensors='ms')
+    52         1    8656589.1    9e+06     15.4    logits, tokens, mask = model(inputs['input_ids'])
+    53         1       1931.5   1931.5      0.0    preds = F.argmax(logits, -1)
+    54         1          1.0      1.0      0.0    assert preds is not None
+    55         1          0.5      0.5      0.0    if not IS_WIN: return     # 傻逼 Ascend 只能跑起来一个
+    56
+    57                                             # benchmark
+    58         1          0.2      0.2      0.0    N_SAMPLES = 5
+    59         1        158.9    158.9      0.0    with open(TEST_FILE, 'r', encoding='utf-8') as fh:
+    60         1       1843.4   1843.4      0.0      data = json.load(fh)[:N_SAMPLES]
+    61         1         58.8     58.8      0.0      TEST_SAMPLES = [it["instruction"] + it['input'] for it in data]
+    62
+    63         6       5819.9    970.0      0.0    for i, txt in enumerate(tqdm(TEST_SAMPLES)):
+    64         5        837.7    167.5      0.0      print(f'[{i}] {txt}')
+    65         5       3256.0    651.2      0.0      inputs = tokenizer([txt], return_tensors='ms')
+    66         5   47446181.6    9e+06     84.5      logits, tokens, mask = model(inputs['input_ids'])
+    67         5       5701.9   1140.4      0.0      preds = F.argmax(logits, -1)
+    68         5          3.0      0.6      0.0      assert preds is not None
+
+
+  0.61 seconds - C:\Workspace\@Contest\2024.06.06 昇思MindSpore模型开发挑战赛\P3#推理调优赛题\stage1\mindformers\mindformers\models\llama\llama_layer.py:207 - construct
+ 18.06 seconds - C:\Workspace\@Contest\2024.06.06 昇思MindSpore模型开发挑战赛\P3#推理调优赛题\stage1\mindformers\mindformers\models\llama\llama_transformer.py:242 - construct
+ 35.29 seconds - C:\Workspace\@Contest\2024.06.06 昇思MindSpore模型开发挑战赛\P3#推理调优赛题\stage1\mindformers\mindformers\models\llama\llama_layer.py:470 - construct
+ 54.11 seconds - C:\Workspace\@Contest\2024.06.06 昇思MindSpore模型开发挑战赛\P3#推理调优赛题\stage1\mindformers\mindformers\models\llama\llama_transformer.py:507 - construct
+ 54.26 seconds - C:\Workspace\@Contest\2024.06.06 昇思MindSpore模型开发挑战赛\P3#推理调优赛题\stage1\mindformers\mindformers\models\llama\llama.py:175 - construct
+ 54.99 seconds - C:\Miniconda3\envs\llm\lib\site-packages\mindspore\nn\cell.py:473 - _run_construct
+ 55.25 seconds - C:\Miniconda3\envs\llm\lib\site-packages\mindspore\nn\cell.py:658 - __call__
+ 56.09 seconds - C:\Workspace\@Contest\2024.06.06 昇思MindSpore模型开发挑战赛\P3#推理调优赛题\stage1\mindformers\mindformers\models\llama\llama.py:344 - construct
+ 56.12 seconds - ./test_llama_infer_dummy.py:47 - benchmark
+ 

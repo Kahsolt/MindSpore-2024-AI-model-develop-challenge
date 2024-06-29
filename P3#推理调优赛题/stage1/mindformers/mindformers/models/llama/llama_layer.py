@@ -14,6 +14,7 @@
 # ============================================================================
 """LLaMA Model Layers' APIs."""
 
+import sys
 from enum import Enum
 import numpy as np
 
@@ -39,6 +40,8 @@ from mindformers.modules.layers import Linear, _check_input_dtype, _args_type_va
     _valid_value_checks
 from mindformers.tools.logger import _LogActionOnce
 from mindformers.version_control import check_rmsnorm_big_kernel_valid
+
+IS_WIN = sys.platform == 'win32'
 
 
 class SeqExtendMethod(Enum):
@@ -131,7 +134,6 @@ class FreqsMgr(Cell):
     def construct(self, seq_length):
         freqs_cos = self.slice(self.freqs_cos, (0, 0), (seq_length, self.head_dim), (1, 1))
         freqs_sin = self.slice(self.freqs_sin, (0, 0), (seq_length, self.head_dim), (1, 1))
-
         return freqs_cos, freqs_sin, self.swap_mask
 
     def prefill(self, batch_size, seq_length):
@@ -186,7 +188,13 @@ class LlamaRotaryEmbedding(Cell):
 
     def rotate_half(self, x, swap_mask):
         # [bs, n_head/n_kv_head, seq/1, head_dim], [head_dim, head_dim]
-        x = self.bmm_swap(x, swap_mask)
+        if IS_WIN:
+            B, H, S, D = x.shape
+            x = x.reshape([B * H * S, D])
+            x = self.bmm_swap(x, swap_mask)
+            x = x.reshape([B, H, S, D])
+        else:
+            x = self.bmm_swap(x, swap_mask)
         return x
 
     def slice_half(self, x):
@@ -196,26 +204,29 @@ class LlamaRotaryEmbedding(Cell):
         x = self.concat((self.neg(x2), x1))
         return x
 
+    #@profile
     def construct(self, xq: Tensor, xk: Tensor, freqs_cis):
         """Forward of rotary position embedding."""
         original_type = xq.dtype
+        # TIMEIT: 1.3% (CPU)
         xq = self.cast(xq, self.dtype)
+        # TIMEIT: 1.1% (CPU)
         xk = self.cast(xk, self.dtype)
         # xq, xk: [bs, n_head/n_kv_head, seq/1, head_dim]
         freqs_cos, freqs_sin, swap_mask = freqs_cis
         mul = self.mul if self.is_first_iteration else self.mul_inc
         if self.use_rope_slice:
-            xq_out = self.add(mul(xq, freqs_cos),
-                              mul(self.slice_half(xq), freqs_sin))
-            xk_out = self.add(mul(xk, freqs_cos),
-                              mul(self.slice_half(xk), freqs_sin))
-        else:
-            xq_out = self.add(mul(xq, freqs_cos),
-                              mul(self.rotate_half(xq, swap_mask), freqs_sin))
-            xk_out = self.add(mul(xk, freqs_cos),
-                              mul(self.rotate_half(xk, swap_mask), freqs_sin))
+            xq_out = self.add(mul(xq, freqs_cos), mul(self.slice_half(xq), freqs_sin))
+            xk_out = self.add(mul(xk, freqs_cos), mul(self.slice_half(xk), freqs_sin))
+        else:       # <- this way
+            # TIMEIT: 53.3% (CPU)
+            xq_out = self.add(mul(xq, freqs_cos), mul(self.rotate_half(xq, swap_mask), freqs_sin))
+            # TIMEIT: 40.7% (CPU)
+            xk_out = self.add(mul(xk, freqs_cos), mul(self.rotate_half(xk, swap_mask), freqs_sin))
 
+        # TIMEIT: 2.0% (CPU)
         xq_out = self.cast(xq_out, original_type)
+        # TIMEIT: 1.6% (CPU)
         xk_out = self.cast(xk_out, original_type)
         return xq_out, xk_out
 
@@ -310,15 +321,13 @@ class LlamaRMSNorm(nn.Cell):
         self.compute_type = compute_type
         self.weight = Parameter(initializer('ones', (dim,), dtype=mstype.float32), parallel_optimizer=False)
 
-        if check_rmsnorm_big_kernel_valid():
+        if check_rmsnorm_big_kernel_valid() and not IS_WIN:
             self.norm = P.RmsNorm(eps)
             self.rms_norm = self._rms_norm
             self.self_define = False
             self.cast = P.Cast()
             self.rcast = P.Cast()
-            import sys
-            if sys.platform != 'win32':
-                self.cast.recompute()
+            self.cast.recompute()
         else:
             self.cast = P.Cast()
             self.mul = P.Mul()
@@ -458,14 +467,19 @@ class LlamaFeedForward(Cell):
                          param_init_type=param_init_type,
                          skip_redistribution=is_dynamic)
 
+    #@profile
     def construct(self, x):
         """Forward process of the FeedForward"""
         _check_input_dtype(F.dtype(x), "x", [mstype.float32, mstype.float16, mstype.bfloat16], self.cls_name)
         x = self.cast(x, self.dtype)
         # [bs, seq, hidden_dim] or [bs * seq, hidden_dim]
+        # TIMEIT: 33.8% (CPU)
         gate = self.w1(x)  # dp,1 -> dp, mp
+        # TIMEIT: 32.6% (CPU)
         hidden = self.w3(x)  # dp,1 -> dp, mp
+        # TIMEIT: 0.3% (CPU)
         hidden = self.mul(hidden, gate)  # dp,mp -> dp, mp
+        # TIMEIT: 33.4% (CPU)
         output = self.w2(hidden)  # dp,mp -> dp, 1
         return output
 
