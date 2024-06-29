@@ -7,13 +7,15 @@
 
 - `conda create -n llm python==3.9.19`
 - run `material\download.cmd` and unzip everything under this repo root
-- `run_init.cmd`
+- see `run_init.cmd` and `run_infer.cmd`
 
 ⚪ 云上 (实测)
 
 ⚠ 云实验环境不保存系统状态，每次重启都要重新安装 python lib
 
 - see [run_init.sh](./run_init.sh) and [run_infer.sh](./run_infer.sh)
+  - you'll need `source ./run_init.sh` rather than `bash ./run_init.sh`!
+  - as for `run_infer.sh`, copy line and run by yourself
 - overwrite `llm-serving`, `mindformers` and `performance_serving` with this repo's modified version
 
 

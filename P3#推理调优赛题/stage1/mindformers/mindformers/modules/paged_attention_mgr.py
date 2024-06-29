@@ -44,17 +44,12 @@ class PagedAttentionMgr(nn.Cell):
         self.scale_value = 1 / math.sqrt(self.head_dim)
 
         kv_shape = (self.num_blocks, self.block_size, self.n_kv_heads, self.head_dim)
-        self.key_cache = Parameter(Tensor(shape=kv_shape, dtype=compute_dtype, init=Zero()), name="key_cache",
-                                   requires_grad=False)
-        self.value_cache = Parameter(Tensor(shape=kv_shape, dtype=compute_dtype, init=Zero()), name="value_cache",
-                                     requires_grad=False)
+        self.key_cache = Parameter(Tensor(shape=kv_shape, dtype=compute_dtype, init=Zero()), name="key_cache", requires_grad=False)
+        self.value_cache = Parameter(Tensor(shape=kv_shape, dtype=compute_dtype, init=Zero()), name="value_cache", requires_grad=False)
 
         self.reshape_and_cache = P.auto_generate.ReshapeAndCache()
-        self.paged_attention = P.auto_generate.PagedAttention(self.n_heads, self.scale_value,
-                                                              self.n_kv_heads)
-        self.paged_attention_with_alibi = P.auto_generate.PagedAttentionMask(self.n_heads,
-                                                                             self.scale_value,
-                                                                             self.n_kv_heads)
+        self.paged_attention = P.auto_generate.PagedAttention(self.n_heads, self.scale_value, self.n_kv_heads)
+        self.paged_attention_with_alibi = P.auto_generate.PagedAttentionMask(self.n_heads, self.scale_value, self.n_kv_heads)
 
     def construct(self, key, value, slot_mapping):
         """The forward compute of KVCache for Paged Attention."""
@@ -66,8 +61,7 @@ class PagedAttentionMgr(nn.Cell):
 
     def paged_attn_with_alibi(self, query, batch_valid_length, block_tables, alibi_tensor):
         """The forward compute of KVCache for Paged Attention with alibi tensor."""
-        return self.paged_attention_with_alibi(query, self.key_cache, self.value_cache,
-                                               block_tables, batch_valid_length, alibi_tensor)
+        return self.paged_attention_with_alibi(query, self.key_cache, self.value_cache, block_tables, batch_valid_length, alibi_tensor)
 
     def shard(self, parallel_config):
         """The shard strategy."""

@@ -82,8 +82,7 @@ class LlamaWarmupInputs(BaseWarmupInputs):
 
     # 加入page attention判断
 
-    def get_warmup_inputs(self, seq_length, batch_size, full_model, use_current_index=True, valid_length=None,
-                          page_attention=False, **kwargs):
+    def get_warmup_inputs(self, seq_length, batch_size, full_model, use_current_index=True, valid_length=None, page_attention=False, **kwargs):
         print("===========================get_warmup_inputs")
         input_ids = np.ones([batch_size, seq_length], dtype=np.int32)
         current_index = np.array([1] * batch_size, dtype=np.int32)
@@ -121,7 +120,6 @@ class LlamaWarmupInputs(BaseWarmupInputs):
             model_type = kwargs.pop('model_type')
             logging.debug(f"model_type in llamaWarmup: {model_type}")
             extra_cls = LlamaExtraInputs()
-            input_extra_list = extra_cls.get_extra_inputs(input_ids, current_index, None, full_model,
-                                                          batch_valid_length, **kwargs)
+            input_extra_list = extra_cls.get_extra_inputs(input_ids, current_index, None, full_model, batch_valid_length, **kwargs)
             inputs_list.extend(input_extra_list)
         return inputs_list

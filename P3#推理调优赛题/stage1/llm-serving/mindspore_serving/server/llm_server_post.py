@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import subprocess
+from time import time
 
 from mindspore_serving.master.master import AsyncMaster
 from mindspore_serving.master.response_async_queue import AsyncResultsOfOneRequest
@@ -8,9 +9,7 @@ from mindspore_serving.master.utils import ResponseOutput, ModelInfo
 from mindspore_serving.master.request_resister_engine import RequestEngine
 from mindspore_serving.config.config import ServingConfig
 
-
 # from mindspore_serving.serving_utils.register import import_all_modules_for_register
-
 # import_all_modules_for_register()
 
 
@@ -48,16 +47,12 @@ class LLMServer:
             raise RuntimeError("Background loop is already running.")
         self.background_loop = asyncio.get_event_loop().create_task(self.run_loop())
 
-    async def register_request(self,
-                               request_id: str,
-                               **add_request_info) -> AsyncResultsOfOneRequest:
+    async def register_request(self, request_id: str, **add_request_info) -> AsyncResultsOfOneRequest:
         logging.debug("background loop {}".format(self.background_loop))
         if self.background_loop is None:
             self.start_background_loop()
 
-        res_stream = self.request_engine.register_request(
-            request_id,
-            **add_request_info)
+        res_stream = self.request_engine.register_request(request_id, **add_request_info)
         return res_stream
 
     def _abort(self, request_id: str) -> None:
@@ -92,22 +87,21 @@ class LLMServer:
         return self.master.get_current_requestes_nums()
 
     async def generate_answer(
-            self,
-            request_id: str,
-            **add_request_info
+        self,
+        request_id: str,
+        **add_request_info
     ) -> ResponseOutput:
-
-        # Preprocess the request.
+        ts = time()
         try:
+            # Preprocess the request.
             res_stream = await self.register_request(request_id, **add_request_info)
-
             async for request_output in res_stream:
                 yield request_output
-
         except Exception as e:
             # If there is an exception, abort the request.
             self._abort(request_id)
             raise e
+        print(f'[generate_answer] {time() - ts}')       # FIXME: this takes seconds
 
     async def _master_abort(self, request_ids):
         self.master.abort_request(request_ids)
@@ -118,15 +112,12 @@ class LLMServer:
         self.master.stop()
 
     def get_dockerId(self):
-        p = subprocess.Popen("cat /proc/self/cgroup | grep /docker | head -1 | cut -d/ -f3", shell=True,
-                             stdout=subprocess.PIPE)
+        p = subprocess.Popen("cat /proc/self/cgroup | grep /docker | head -1 | cut -d/ -f3", shell=True, stdout=subprocess.PIPE)
         out = p.stdout.read()
         id = str(out, 'utf-8')
         return id
 
-    def get_serverd_model_info(
-            self
-    ) -> ModelInfo:
+    def get_serverd_model_info(self) -> ModelInfo:
         max_seq_length = int(self.config.model_config.seq_length[-1])
         max_decode_batch_size = int(self.config.model_config.decode_batch_size[-1])
         docker_id = self.get_dockerId()

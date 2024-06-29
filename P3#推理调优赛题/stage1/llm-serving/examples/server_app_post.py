@@ -14,13 +14,16 @@
 # limitations under the License.
 # ============================================================================
 """MindSpore Serving server app"""
-import argparse
-import json
-import logging
+
+# This is the HTTP server that handles requests
+
 import os
-import sys
+import json
 import uuid
+import logging
+import argparse
 from contextlib import asynccontextmanager
+from typing import List
 
 import uvicorn
 from fastapi import FastAPI
@@ -32,6 +35,8 @@ from mindspore_serving.config.config import ServingConfig, check_valid_config
 from mindspore_serving.server.llm_server_post import LLMServer
 from mindspore_serving.serving_utils.constant import *
 
+DEBUG_WIN = os.getenv('DEBUG_WIN')
+work_path = os.path.dirname(os.path.abspath(__file__))
 logging.basicConfig(level=logging.DEBUG,
                     filename='./output/server_app.log',
                     filemode='w',
@@ -135,9 +140,9 @@ async def get_full_res_sse(request, results):
 
 
 async def get_stream_res(request, results):
-    all_texts = ""
+    all_texts: List[str] = []
     tokens_list = []
-    finish_reason = ""
+    finish_reason: str = None
     output_tokens_len = 0
     token_index = 0
     async for result in results:
@@ -157,7 +162,7 @@ async def get_stream_res(request, results):
                 "text": answer_texts
             }
             tokens_list.append(res_list)
-            all_texts += answer_texts
+            all_texts.append(answer_texts)
 
             ret = {
                 "details": None,
@@ -173,7 +178,7 @@ async def get_stream_res(request, results):
     return_full_text = request.parameters.return_full_text
     if return_full_text:
         ret = {
-            "generated_text": all_texts,
+            "generated_text": ''.join(all_texts),
             "finish_reason": finish_reason,
             "generated_tokens": output_tokens_len,
             "prefill": [tokens_list[0]],
@@ -187,10 +192,10 @@ async def get_stream_res(request, results):
         yield ("data:" + json.dumps(ret, ensure_ascii=False) + '\n').encode("utf-8")
 
 
-async def get_stream_res_sse(request, results):
-    all_texts = ""
+async def get_stream_res_sse(request, results): # <- step 3
+    all_texts: list[str] = []
     tokens_list = []
-    finish_reason = ""
+    finish_reason: str = None
     output_tokens_len = 0
     token_index = 0
     async for result in results:
@@ -210,7 +215,7 @@ async def get_stream_res_sse(request, results):
                 "text": answer_texts
             }
             tokens_list.append(res_list)
-            all_texts += answer_texts
+            all_texts.append(answer_texts)
 
             tmp_ret = {
                 "details": None,
@@ -232,7 +237,7 @@ async def get_stream_res_sse(request, results):
     if return_full_text:
         full_tmp_ret = {
             "details": None,
-            "generated_text": all_texts,
+            "generated_text": ''.join(all_texts),
             "finish_reason": finish_reason,
             "generated_tokens": output_tokens_len,
             "prefill": [tokens_list[0]],
@@ -250,19 +255,21 @@ async def get_stream_res_sse(request, results):
         yield (json.dumps(ret, ensure_ascii=False) + '\n').encode("utf-8")
 
 
-def send_request(request: ClientRequest):
+def send_request(request: ClientRequest):       # <- step 2
     print('request: ', request)
+
+    if os.getenv('FAKE_LLM_SERVING'):
+        return 
 
     if config.model_config.model_name == 'internlm_7b':
         request.inputs = INTERNLM_PROMPT_FORMAT.format(request.inputs)
-    elif config.model_config.model_name == 'baichuan2pa':    
+    elif config.model_config.model_name == 'baichuan2pa':
         request.inputs = BAICHUAN_PROMPT_FORMAT.format(request.inputs)
 
     request_id = str(uuid.uuid1())
 
     if request.parameters is None:
         request.parameters = Parameters()
-
     if request.parameters.do_sample is None:
         request.parameters.do_sample = False
     if request.parameters.top_k is None:
@@ -277,7 +284,6 @@ def send_request(request: ClientRequest):
         request.parameters.max_new_tokens = 300
     if request.parameters.return_protocol is None:
         request.parameters.return_protocol = "sse"
-
     if request.parameters.decoder_input_details is None:
         request.parameters.decoder_input_details = False
     if request.parameters.details is None:
@@ -299,13 +305,10 @@ def send_request(request: ClientRequest):
 
     if not ValidatorUtil.validate_top_k(request.parameters.top_k, config.model_config.vocab_size):
         request.parameters.top_k = 1
-
     if not ValidatorUtil.validate_top_p(request.parameters.top_p) and request.parameters.top_p < 0.01:
         request.parameters.top_p = 0.01
-
     if not ValidatorUtil.validate_top_p(request.parameters.top_p) and request.parameters.top_p > 1.0:
         request.parameters.top_p = 1.0
-
     if not ValidatorUtil.validate_temperature(request.parameters.temperature):
         request.parameters.temperature = 1.0
         request.parameters.do_sample = False
@@ -354,16 +357,17 @@ async def async_full_generator(request: ClientRequest):
     return StreamingResponse(get_full_res(request, results))
 
 
-@app.post("/models/llama2/generate_stream")
+@app.post("/models/llama2/generate_stream")     # <- step 1
 async def async_stream_generator(request: ClientRequest):
     results = send_request(request)
     if request.parameters.return_protocol == "sse":
         print('get_stream_res_sse...')
-        return EventSourceResponse(get_stream_res_sse(request, results),
-                                   media_type="text/event-stream",
-                                   ping_message_factory=lambda: ServerSentEvent(
-                                       **{"comment": "You can't see this ping"}),
-                                   ping=600)
+        return EventSourceResponse(
+            get_stream_res_sse(request, results),
+            media_type="text/event-stream",
+            ping_message_factory=lambda: ServerSentEvent(**{"comment": "You can't see this ping"}),
+            ping=600
+        )
     else:
         print('get_stream_res...')
         return StreamingResponse(get_stream_res(request, results))
@@ -456,12 +460,11 @@ async def get_serverd_model_info():
 
 
 if __name__ == "__main__":
-    work_path = os.path.dirname(os.path.abspath(__file__))
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        '--config',
-        required=True,
-        help='YAML config files')
+    parser.add_argument('--config', required=True, help='YAML config files')
     args = parser.parse_args()
+
     config = ServingConfig(args.config)
+    if DEBUG_WIN:   # NOTE: this fucking path CANNOT contain white spaces
+        config.tokenizer.vocab_file = '../performance_serving/tokenizer.model'
     run_server_app(config.serving_config)

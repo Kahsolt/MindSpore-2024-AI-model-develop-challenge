@@ -13,6 +13,7 @@
 # limitations under the License.
 # ============================================================================
 """LLaMA models' APIs."""
+import os
 import copy
 import numpy as np
 
@@ -21,6 +22,7 @@ from mindspore import Tensor, nn
 from mindspore.context import ParallelMode
 from mindspore.ops import operations as P
 from mindspore.parallel._utils import _get_parallel_mode, _is_sharding_propagation
+import mindspore.ops.functional as F
 
 from mindformers.core.loss.loss import CrossEntropyLoss
 from mindformers.mindformer_book import MindFormerBook
@@ -39,6 +41,8 @@ from ..utils import cell_reuse
 from ...tools.logger import logger
 
 __all__ = ['LlamaModel', 'LlamaForCausalLM']
+
+DEBUG_WIN = os.getenv('DEBUG_WIN')
 
 
 class LlamaPreTrainedModel(PreTrainedModel):
@@ -258,6 +262,7 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
         self.gather = P.Gather(1)
         self.sub_batch_valid_len = P.Sub()
         self.model = LlamaModel(config=config)
+        # weight.shape = (32000, 4096), no bias
         self.lm_head = Linear(in_channels=config.hidden_size,
                               out_channels=config.vocab_size,
                               has_bias=False,
@@ -365,11 +370,17 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
             batch_valid_length = self.reshape(batch_valid_length, (-1,))
         if not self.is_first_iteration:
             batch_valid_length = self.sub_batch_valid_len(batch_valid_length, 1)
-        output = self.model(tokens, batch_valid_length, batch_index, zactivate_len, block_tables, slot_mapping)
-        pre_gather = (not self.use_past or self.is_first_iteration) and batch_valid_length is not None
-        if pre_gather:
-            output = self.gather(output, self.sub_batch_valid_len(batch_valid_length, 1), 1)
-        logits = self.lm_head(output)
+
+        if DEBUG_WIN:
+            B, L = tokens.shape
+            D = self.lm_head.weight.shape[0]
+            logits = F.rand([B, D], dtype=self.lm_head.weight.dtype)
+        else:
+            output = self.model(tokens, batch_valid_length, batch_index, zactivate_len, block_tables, slot_mapping)
+            pre_gather = (not self.use_past or self.is_first_iteration) and batch_valid_length is not None
+            if pre_gather:
+                output = self.gather(output, self.sub_batch_valid_len(batch_valid_length, 1), 1)
+            logits = self.lm_head(output)
 
         input_mask = self.cast(self.not_equal(tokens, self.pad_token_id), mstype.float32)
         if labels is None:

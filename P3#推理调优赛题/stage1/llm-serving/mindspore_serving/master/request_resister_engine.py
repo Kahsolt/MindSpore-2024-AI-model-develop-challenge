@@ -26,8 +26,7 @@ class RequestEngine:
     
     def abort_request(self, request_id: str) -> None:
         self._done_requests.put_nowait(request_id)  
-        if request_id not in self._results_streams or \
-            self._results_streams[request_id].finished:
+        if request_id not in self._results_streams or self._results_streams[request_id].finished:
             return
 
         self._results_streams[request_id].finish()

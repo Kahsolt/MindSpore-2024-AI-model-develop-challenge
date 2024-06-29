@@ -60,9 +60,7 @@ def run_mindspore(output_dir):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        '--output_dir',
-        required=True,
-        help='output dir for exporting post_sampling models')
+    parser.add_argument('--output_dir', required=True, help='output dir for exporting post_sampling models')
     args = parser.parse_args()
+
     run_mindspore(args.output_dir)

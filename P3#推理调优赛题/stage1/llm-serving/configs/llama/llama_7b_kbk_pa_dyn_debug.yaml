@@ -2,7 +2,7 @@ model_config:
     # model
     model_name: 'llama_7b'
     model_dtype: "DataType.FLOAT16"     # mindformers.config uses fp16
-    model_cfg_path: '/home/ma-user/work/mindformers/configs/llama2/predict_llama2_7b.yaml'
+    model_cfg_path: '../mindformers/configs/llama2/predict_llama2_7b_debug.yaml'
     # tokenizer
     vocab_size: 32000
     pad_token_id: 0
@@ -20,7 +20,7 @@ model_config:
     batch_waiting_time: 0.0
     decode_batch_waiting_time: 0.0
     # page-attn
-    page_attention: True
+    page_attention: False
     # misc
     current_index: False                        # deprecated
     backend: 'kbk'                              # 'ge'
@@ -39,7 +39,7 @@ pa_config:      # page_attention
 
 tokenizer:
     type: LlamaTokenizer
-    vocab_file: '/home/ma-user/work/checkpoint_download/llama2/tokenizer.model'
+    vocab_file: 'performance_serving/tokenizer.model'
 
 basic_inputs:
     type: LlamaBasicInputs

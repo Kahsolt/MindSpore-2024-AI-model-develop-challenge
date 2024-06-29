@@ -24,7 +24,7 @@ import mindspore as ms
 from mindspore import context, Tensor
 from mindspore.communication.management import init
 from mindspore.common.initializer import Zero
-from mindspore._c_expression import swap_cache
+#from mindspore._c_expression import swap_cache
 
 from mindformers import build_context, logger, build_parallel_config, GenerationConfig, AutoModel, AutoConfig
 from mindformers.models.build_config import build_model_config

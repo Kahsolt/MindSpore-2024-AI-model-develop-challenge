@@ -316,7 +316,9 @@ class LlamaRMSNorm(nn.Cell):
             self.self_define = False
             self.cast = P.Cast()
             self.rcast = P.Cast()
-            self.cast.recompute()
+            import sys
+            if sys.platform != 'win32':
+                self.cast.recompute()
         else:
             self.cast = P.Cast()
             self.mul = P.Mul()

@@ -1,5 +1,3 @@
-
-
 import numpy as np
 TOPP_NUM = 1
 
@@ -31,9 +29,6 @@ def softmax_np(x):
     exp_x = np.exp(x)
     softmax_x = exp_x / np.sum(exp_x)
     return softmax_x
-
-
-import numpy as np
 
 
 def softmax_matrix(x):

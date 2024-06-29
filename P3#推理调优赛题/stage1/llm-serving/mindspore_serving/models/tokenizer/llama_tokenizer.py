@@ -96,7 +96,7 @@ class LlamaTokenizer:
 
     def __setstate__(self, d):
         self.__dict__ = d
-        self.sp_model = spm.SentencePieceProcessor(model_file=vocab_file)
+        self.sp_model = spm.SentencePieceProcessor(model_file=self.vocab_file)
         self.sp_model.Load(self.vocab_file)
 
     @property
@@ -182,10 +182,10 @@ class LlamaTokenizer:
         return output
 
     def get_special_tokens_mask(
-            self,
-            token_ids_0: List[int],
-            token_ids_1: Optional[List[int]] = None,
-            already_has_special_tokens: bool = False
+        self,
+        token_ids_0: List[int],
+        token_ids_1: Optional[List[int]] = None,
+        already_has_special_tokens: bool = False
     ) -> List[int]:
         """
         Retrieve sequence ids from a token list that has no special tokens added. This method is called when adding

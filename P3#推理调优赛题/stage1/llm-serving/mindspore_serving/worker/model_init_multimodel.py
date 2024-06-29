@@ -1,3 +1,4 @@
+import os
 import time
 import logging
 import numpy as np
@@ -5,6 +6,12 @@ from typing import List
 import socket
 from mindspore_serving.config.config import ServingConfig
 from mindspore_serving.models.build_inputs import build_inputs
+
+# This is the socket send that sends command requests
+# see reciever: llm-serving\mindspore_serving\agent\agent_multi_post_method_task1.py
+import mindspore_serving.agent.agent_multi_post_method_task1
+
+DEBUG_WIN = os.getenv('DEBUG_WIN')
 
 
 class BaseInputsOfInfer:
@@ -260,14 +267,17 @@ class DisModel:
         model_name = config.model_config.model_name
         print(f"agent_ports is {agent_ports}")
         for port in agent_ports:
-            print("port ip is {}".format(port))
+            print("port ip is {}".format(agent_ip))
             client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             # socket是1对1的，设置超时机制，防止多个serving连接同一个LLM
             client.settimeout(5)
             client.connect((agent_ip, port))
             send_str = '#' + ",".join(str(element) for element in shm_names)
             client.sendall(send_str.encode())
-            data = client.recv(6, socket.MSG_WAITALL).decode()
+            if DEBUG_WIN:
+                data = client.recv(6).decode()      # 'succes' or 'failed'
+            else:
+                data = client.recv(6, socket.MSG_WAITALL).decode()
             print(data)
             if data == "failed":
                 client.close()
@@ -290,7 +300,10 @@ class DisModel:
             client.settimeout(5)
             client.connect((agent_ip, port))
             client.sendall("r".encode())
-            data = client.recv(6, socket.MSG_WAITALL).decode()
+            if DEBUG_WIN:
+                data = client.recv(6).decode()
+            else:
+                data = client.recv(6, socket.MSG_WAITALL).decode()
             print(data)
             if data == "succes":
                 print("reset")
@@ -320,18 +333,13 @@ class DisModel:
                                        valid_length=valid_length, init_reset=init_reset,
                                        is_first_iteration=is_first_iteration, **kwargs)
 
-    def get_model_inputs(self, input_ids, current_index=None,
-                         valid_length=None, is_first_iteration=True, **kwargs) -> np.array:
+    def get_model_inputs(self, input_ids, current_index=None, valid_length=None, is_first_iteration=True, **kwargs) -> np.array:
         if is_first_iteration:
             init_reset = np.array([False])
-            lite_inputs = self.get_predict_inputs(input_ids, current_index,
-                                                  valid_length, init_reset, is_first_iteration, **kwargs)
-
+            lite_inputs = self.get_predict_inputs(input_ids, current_index, valid_length, init_reset, is_first_iteration, **kwargs)
         else:
             init_reset = np.array([True])
-            lite_inputs = self.get_predict_inputs(input_ids, current_index,
-                                                  valid_length, init_reset, is_first_iteration, **kwargs)
-
+            lite_inputs = self.get_predict_inputs(input_ids, current_index, valid_length, init_reset, is_first_iteration, **kwargs)
         return lite_inputs
 
     def get_warp_inputs(self, lite_inputs=None, **kwargs):
@@ -353,12 +361,10 @@ class DisModel:
         temperature_np = np.array(temperature_list).reshape(batch_size, 1).astype(dtype)
         repetition_np = np.array(repetition_penalty).reshape(batch_size, 1).astype(dtype)
         decode_index_np = np.array(decode_index_list).reshape(batch_size, 1).astype(dtype)
-        parms_np = np.concatenate((do_sample_np, top_p_np, top_k_np, temperature_np, repetition_np, decode_index_np),
-                                  axis=-1)
+        parms_np = np.concatenate((do_sample_np, top_p_np, top_k_np, temperature_np, repetition_np, decode_index_np), axis=-1)
         return parms_np
 
-    def _assemble_pa_inputs(self, is_first_iteration, batch_valid_length: np.array, cache_engine_list, seq_length,
-                            valid_batch_flag):
+    def _assemble_pa_inputs(self, is_first_iteration, batch_valid_length: np.array, cache_engine_list, seq_length, valid_batch_flag):
         if is_first_iteration:
             return self._assemble_pa_full_inputs(batch_valid_length, cache_engine_list, seq_length, valid_batch_flag)
         else:
@@ -377,8 +383,7 @@ class DisModel:
             # 预留出首个块，给冗余写用，全量需要这个 TODO:后续优化ReshapeAndCache逻辑，跳过冗余位置
             block_table = cache_engine_list[i].block_table
             # padded_table = block_table + [ -1 for _ in range(max_num_blocks_per_seq - len(cache_engine_list[i].block_table) + 1)]
-            padded_table = block_table + [-1 for _ in
-                                          range(max_num_blocks_per_seq - len(cache_engine_list[i].block_table))]
+            padded_table = block_table + [-1 for _ in range(max_num_blocks_per_seq - len(cache_engine_list[i].block_table))]
             block_tables.append(padded_table)
 
             slots = [block_table[k // block_size] * block_size + k % block_size for k in range(batch_valid_length[i])]
@@ -402,8 +407,7 @@ class DisModel:
             else:
                 valid_length = 1
             block_table = cache_engine_list[i].block_table
-            padded_table = block_table + [-1 for _ in
-                                          range(max_num_blocks_per_seq - len(cache_engine_list[i].block_table))]
+            padded_table = block_table + [-1 for _ in range(max_num_blocks_per_seq - len(cache_engine_list[i].block_table))]
             block_tables.append(padded_table)
             curent_idx = valid_length - 1
 
@@ -420,13 +424,13 @@ class DisModel:
         time_start = time.time()
         logging.debug("is prefill {}".format(is_first_iteration))
         decode_index_list = kwargs.get("decode_index_list")
+
         # 加入pa
         if self.config.model_config.page_attention:
             cache_engine_list = kwargs.get("cache_engine_list")
             seq_length = kwargs.get("seq_length")
         if is_first_iteration:
-            lite_inputs = self.get_model_inputs(input_ids, current_index, valid_length,
-                                                is_first_iteration, extra_inputs=extra_inputs, **kwargs)
+            lite_inputs = self.get_model_inputs(input_ids, current_index, valid_length, is_first_iteration, extra_inputs=extra_inputs, **kwargs)
             # 前4个array拼接成一个
             # init_reset变成[batch_size, 1]
             # first_group, second_group = self.get_warp_inputs(lite_inputs=lite_inputs, **kwargs)
@@ -497,11 +501,14 @@ class DisModel:
         shapes_str = shapes_str.encode()
 
         for item in self.agent_stubs:
-            item.sendall(shapes_str)
-        recv_data = self.agent_stubs[0].recv(1, socket.MSG_WAITALL).decode()
+            item.sendall(shapes_str)        # "1"
+        if DEBUG_WIN:
+            recv_data = self.agent_stubs[0].recv(1).decode()
+        else:
+            recv_data = self.agent_stubs[0].recv(1, socket.MSG_WAITALL).decode()
 
         result = []
-        if recv_data == "2":
+        if recv_data == "2":    # RuntimeError
             for _ in decode_index_list:
                 # result.append(int(Baseconfig.end_token))
                 result.append((int(-1),0))

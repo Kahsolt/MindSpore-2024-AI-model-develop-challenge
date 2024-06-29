@@ -26,7 +26,7 @@ from mindformers.tools.logger import logger
 from .utils import get_real_rank
 
 try:
-    import fcntl
+    import fcntl        # <- safe to ignore on Windows :)
 except ImportError:
     fcntl = None
     logger.warning("The library fcntl is not found. This may cause the reading file failed "

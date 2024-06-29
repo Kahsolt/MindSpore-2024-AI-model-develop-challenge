@@ -221,8 +221,7 @@ class Master:
     def get_current_requestes_nums(self):
         return self.scheduler.get_queue_len()
 
-    def abort_request(self,
-                      request_id: str) -> None:
+    def abort_request(self, request_id: str) -> None:
         self.scheduler.abort_entry(request_id)
 
     def add_requests_to_schedule_pool(self,
