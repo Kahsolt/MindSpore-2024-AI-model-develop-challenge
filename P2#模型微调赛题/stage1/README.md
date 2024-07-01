@@ -1,23 +1,62 @@
-# LLaMA2-8b 模型微调
+# LLaMA3-8b 模型微调
 
+----
 
-#### 环境构建
+### 资源材料下载
 
+⭐实验手册⭐: [2024昇腾AI大赛MindSpore赛道实验指导手册.pdf](https://2024-ascend-innovation-contest-mindspore.obs.cn-southwest-2.myhuaweicloud.com/2024昇腾AI大赛MindSpore赛道实验指导手册.pdf)  
 
-#### 资源材料
+⚠ **以下资源链接仅供参考引用，不要手动下载**，参考脚本 [material/download.cmd](./material/download.cmd) 来自动化下载！！
 
-⚠ 最终评测在 Ascend910b4 设备上，其指令集架构为 aarch64
+- LLaMA3-8b
+  - checkpoint: [llama3-8B.ckpt](https://2024-ascend-innovation-contest-mindspore.obs.cn-southwest-2.myhuaweicloud.com/topic2-finetune/llama3-8B.ckpt)
+  - tokenizer: [tokenizer.model](https://2024-ascend-innovation-contest-mindspore.obs.cn-southwest-2.myhuaweicloud.com/topic2-finetune/tokenizer.model)
+- pretrain dataset
+  - SQuAD: [squad1.1.zip](https://2024-ascend-innovation-contest-mindspore.obs.cn-southwest-2.myhuaweicloud.com/topic2-finetune/squad1.1.zip)
+- finetune dataset
+  - 转换前: [train.json](https://2024-ascend-innovation-contest-mindspore.obs.cn-southwest-2.myhuaweicloud.com/topic2-finetune/train.json)
+  - 微调数据集转换后: [train-data-conversation.json](https://2024-ascend-innovation-contest-mindspore.obs.cn-southwest-2.myhuaweicloud.com/topic2-finetune/train-data-conversation.json)
+  - 微调配置文件参考: [run_llama3_8b_8k_800T_A2_64G_lora_dis_256.yaml](https://2024-ascend-innovation-contest-mindspore.obs.cn-southwest-2.myhuaweicloud.com/topic2-finetune/run_llama3_8b_8k_800T_A2_64G_lora_dis_256.yaml)
+- frameworks
+  - mindspore（或者使用官网mindspore2.3.0RC2）：[mindspore-2.3.0rc2-cp39-cp39-linux_aarch64.whl](https://2024-ascend-innovation-contest-mindspore.obs.cn-southwest-2.myhuaweicloud.com/topic2-finetune/mindspore-2.3.0rc2-cp39-cp39-linux_aarch64.whl)
+  - mindformers 比赛固定版: [mindformers.zip](https://2024-ascend-innovation-contest-mindspore.obs.cn-southwest-2.myhuaweicloud.com/topic2-finetune/mindformers.zip)
 
-- 操作指导手册：https://2024-ascend-innovation-contest-mindspore-backup.obs.cn-southwest-2.myhuaweicloud.com/2024%E6%98%87%E8%85%BEAI%E5%88%9B%E6%96%B0%E5%A4%A7%E8%B5%9BMindSpore%E8%B5%9B%E9%81%93%E5%AE%9E%E9%AA%8C%E6%8C%87%E5%AF%BC%E6%89%8B%E5%86%8C.docx
-- Llama3-8b
-  - checkpoint：https://2024-ascend-innovation-contest-mindspore.obs.cn-southwest-2.myhuaweicloud.com/topic2-finetune/llama3-8B.ckpt
-  - tokenizer文件下载链接：https://2024-ascend-innovation-contest-mindspore.obs.cn-southwest-2.myhuaweicloud.com/topic2-finetune/tokenizer.model
-- 微调数据集
-  - 转换前：https://2024-ascend-innovation-contest-mindspore.obs.cn-southwest-2.myhuaweicloud.com/topic2-finetune/train.json
-  - 微调数据集转换后：https://2024-ascend-innovation-contest-mindspore.obs.cn-southwest-2.myhuaweicloud.com/topic2-finetune/train-data-conversation.json
-- mindspore版本下载链接（或者使用官网mindspore2.3.0RC2）：https://2024-ascend-innovation-contest-mindspore.obs.cn-southwest-2.myhuaweicloud.com/topic2-finetune/mindspore-2.3.0rc2-cp39-cp39-linux_aarch64.whl
-- mindformers版本下载链接：https://2024-ascend-innovation-contest-mindspore.obs.cn-southwest-2.myhuaweicloud.com/topic2-finetune/mindformers.zip
-- 微调配置文件参考链接：https://2024-ascend-innovation-contest-mindspore.obs.cn-southwest-2.myhuaweicloud.com/topic2-finetune/run_llama3_8b_8k_800T_A2_64G_lora_dis_256.yaml
+```txt
+各资源的层次依赖关系：
+|               mindformers                    |
+|----------------------------------------------|
+| mindspore | llama3_8b.ckpt & tokenizer.model |
+
+数据集处理：
+- 原始评估数据集: dev-v1.1.json -> squad8192.mindrecord
+- 微调数据集: train.json -> train-data-conversation.json -> train-fastchat256.mindrecord
+
+[基线参考]
+原始权重性能指标：
+  - 原始评估任务 SQuAD
+    - F1 score: 59.87023775108988, Em score: 44.17029511369134
+    - 选手需要保证微调后的模型的原有能力得分大于等于原始指标的90%的得分
+      - F1 score: 53.88321397598089, Em score: 39.75326560232221
+  - 微调任务
+    - Accuracy: 20%
+基线配置微调的训练速度：
+  - 9万条数据集
+  - 4卡 (训练需要 4/8 卡机，推理只需单卡)
+  - LoRA微调（微调参数量大概3million）
+  - 6小时
+  - seq_len=256
+  - batch_size=64
+  - epoch=5
+
+[需要关注的文件]
+- mindformers\research\llama3
+```
+
+### 我们要做的事
+
+⚠ 这个项目的绝大部分实验都是在云平台 Ascend 上训练模型，本地能做的主要是**结果分析、统计分析、画图表**等等  
+⚠ 仓库中这个嵌入的 mindformers 包是**经过高度删减**的，跑不起来模型，请不要手贱去下载模型权重！！因为跑不起来！！  
+ℹ 虽然没有模型权重，但分词器权重放在了 mindformers\checkpoint_download\llama\tokenizer.model，可以玩一下  
 
 ----
 by Armit

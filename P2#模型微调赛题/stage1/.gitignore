@@ -1,0 +1,14 @@
+# meta
+.vscode/
+.ipynb_checkpoints/
+
+# embed repo
+mindformers/docs/
+mindformers/checkpoint_download//llama*
+!mindformers/checkpoint_download/llama/tokenizer.model
+
+# ouputs & logs & results
+output/
+kernel_meta/
+mindformers/log.txt
+mindformers/result_infer.npy
