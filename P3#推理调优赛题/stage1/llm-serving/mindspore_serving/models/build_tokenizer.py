@@ -5,7 +5,6 @@ from mindformers.mindformer_book import MindFormerBook
 from mindformers import AutoTokenizer
 from transformers import AutoTokenizer as TransfomersTokenizer
 from transformers import LlamaTokenizer
-from research.baichuan2.baichuan2_tokenizer import Baichuan2Tokenizer
 
 
 def build_tokenizer(base_config: ServingConfig = None):
@@ -29,9 +28,6 @@ def build_tokenizer(base_config: ServingConfig = None):
         return tokenizer
         # logging.info('load custom tokenizer')
 
-    # 加入百川tokenlizer
-    elif tokenizer_type == 'BaichuanTokenizer':
-        tokenizer = Baichuan2Tokenizer(base_config.tokenizer.vocab_file)
     elif tokenizer_type == 'WizardCoderTokenizer':
         tokenizer = TransfomersTokenizer.from_pretrained(base_config.tokenizer.vocab_file)
     else:

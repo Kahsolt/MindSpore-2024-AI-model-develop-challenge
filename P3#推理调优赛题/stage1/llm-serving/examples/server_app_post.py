@@ -258,11 +258,6 @@ async def get_stream_res_sse(request, results): # <- step 3
 def send_request(request: ClientRequest):       # <- step 2
     print('request: ', request)
 
-    if config.model_config.model_name == 'internlm_7b':
-        request.inputs = INTERNLM_PROMPT_FORMAT.format(request.inputs)
-    elif config.model_config.model_name == 'baichuan2pa':
-        request.inputs = BAICHUAN_PROMPT_FORMAT.format(request.inputs)
-
     request_id = str(uuid.uuid1())
 
     if request.parameters is None:
@@ -378,29 +373,6 @@ async def async_stream_generator(request: ClientRequest):
     else:
         print('get_stream_res...')
         return StreamingResponse(get_stream_res(request, results))
-
-
-def update_internlm_request(request: ClientRequest):
-    if request.inputs:
-        request.inputs = "<s><|User|>:{}<eoh>\n<|Bot|>:".format(request.inputs)
-
-
-@app.post("/models/internlm")
-async def async_internlm_generator(request: ClientRequest):
-    # update_internlm_request(request)
-    return await async_generator(request)
-
-
-@app.post("/models/internlm/generate")
-async def async_internlm_full_generator(request: ClientRequest):
-    # update_internlm_request(request)
-    return await async_full_generator(request)
-
-
-@app.post("/models/internlm/generate_stream")
-async def async_internlm_stream_generator(request: ClientRequest):
-    # update_internlm_request(request)
-    return await async_stream_generator(request)
 
 
 def run_server_app(config):
