@@ -201,7 +201,7 @@ def tokenize_wiki(tokenizer, file_path, seq_length, repeat):
 
 
 def tokenize_qa(tokenizer, file_path, seq_length):
-    raw_data = json.load(open(file_path, "r"))
+    raw_data = json.load(open(file_path, "r", encoding='utf-8'))
     dataset_cls = SupervisedDataset(raw_data, tokenizer, seq_length)
     for i in range(len(dataset_cls)):
         yield dataset_cls[i]

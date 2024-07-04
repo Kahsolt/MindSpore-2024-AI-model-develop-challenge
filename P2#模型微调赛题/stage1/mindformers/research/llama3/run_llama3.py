@@ -140,22 +140,14 @@ def main(task='text_generation',
 
     # start task
     if run_mode == 'train':
-        trainer = Trainer(args=config,
-                          task=task,
-                          train_dataset=train_dataset)
+        trainer = Trainer(args=config, task=task, train_dataset=train_dataset)
         trainer.train(train_checkpoint=ckpt, auto_trans_ckpt=config.auto_trans_ckpt, resume_training=resume)
     elif run_mode == 'finetune':
-        trainer = Trainer(args=config,
-                          task=task,
-                          train_dataset=train_dataset)
+        trainer = Trainer(args=config, task=task, train_dataset=train_dataset)
         trainer.finetune(finetune_checkpoint=ckpt, auto_trans_ckpt=config.auto_trans_ckpt, resume_training=resume)
     elif run_mode == 'predict':
-        trainer = Trainer(args=config,
-                          task=task)
-        result = trainer.predict(input_data=predict_data,
-                                 predict_checkpoint=ckpt,
-                                 auto_trans_ckpt=config.auto_trans_ckpt,
-                                 max_length=int(max_length))
+        trainer = Trainer(args=config, task=task)
+        result = trainer.predict(input_data=predict_data, predict_checkpoint=ckpt, auto_trans_ckpt=config.auto_trans_ckpt, max_length=int(max_length))
         logger.info(result)
 
 
@@ -165,7 +157,7 @@ if __name__ == "__main__":
                         help='set task type.')
     parser.add_argument('--config', default='llama3/run_llama3_8b.yaml', type=str,
                         help='set task type.')
-    parser.add_argument('--run_mode', default='train', type=str,
+    parser.add_argument('--run_mode', default='finetune', type=str,
                         help='set run mode for model.')
     parser.add_argument('--seq_length', default=None, type=int,
                         help='seq_length')
@@ -173,7 +165,7 @@ if __name__ == "__main__":
                         help='open parallel for model.')
     parser.add_argument('--device_id', default=None, type=int,
                         help='device id set when run on single card. Default: 0')
-    parser.add_argument('--mode', default=0, type=int,
+    parser.add_argument('--mode', default=1, type=int,
                         help='0--Graph Mode; 1--Pynative Mode')
     parser.add_argument('--load_checkpoint', default=None, type=str,
                         help='checkpoint name or dir to load.')

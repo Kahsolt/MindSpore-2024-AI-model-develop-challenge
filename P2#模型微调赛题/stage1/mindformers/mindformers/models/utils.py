@@ -73,6 +73,8 @@ def check_recompute_rule(select_recompute, pp_id, layer_id, layer_list):
 
 
 def set_layer_stage_recompute(layer, layer_id, offset, parallel_config, n_layers):
+    import sys
+    if sys.platform == 'win32': return
     r"""
         Default setting for the pipeline is: `(layer_id + offset) // (layers / pipeline_stage)`.
 

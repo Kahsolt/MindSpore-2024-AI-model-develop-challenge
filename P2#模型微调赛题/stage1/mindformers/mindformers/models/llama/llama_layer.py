@@ -186,7 +186,14 @@ class LlamaRotaryEmbedding(Cell):
 
     def rotate_half(self, x, swap_mask):
         # [bs, n_head/n_kv_head, seq/1, head_dim], [head_dim, head_dim]
-        x = self.bmm_swap(x, swap_mask)
+        import sys
+        if sys.platform == 'win32':
+            B, H, S, D = x.shape
+            x = x.reshape([B * H * S, D])
+            x = self.bmm_swap(x, swap_mask)
+            x = x.reshape([B, H, S, D])
+        else:
+            x = self.bmm_swap(x, swap_mask)
         return x
 
     def slice_half(self, x):
@@ -310,7 +317,7 @@ class LlamaRMSNorm(nn.Cell):
         self.compute_type = compute_type
         self.weight = Parameter(initializer('ones', (dim,), dtype=mstype.float32), parallel_optimizer=False)
 
-        if check_rmsnorm_big_kernel_valid():
+        if check_rmsnorm_big_kernel_valid() and False:
             self.norm = P.RmsNorm(eps)
             self.rms_norm = self._rms_norm
             self.self_define = False

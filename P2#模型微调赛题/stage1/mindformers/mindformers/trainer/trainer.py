@@ -521,6 +521,8 @@ class Trainer:
         self._check_config_rules()
         self._init_model(is_train=True)
 
+        from mindformers.trainer.causal_language_modeling.causal_language_modeling import CausalLanguageModelingTrainer
+        self.trainer: CausalLanguageModelingTrainer
         self.trainer.train(
             config=self.config, network=self.model,
             dataset=self.train_dataset, optimizer=self.optimizers,

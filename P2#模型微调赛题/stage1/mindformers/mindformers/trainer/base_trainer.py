@@ -767,6 +767,16 @@ class BaseTrainer:
             # ColdHotExpertMointor needs to be placed before CheckpointMointor
             callbacks.insert(1, cold_hot_mointor)
 
+        from mindspore.train.callback import RunContext, LambdaCallback
+        def lambda_callback(run_context:RunContext):
+            ctx = run_context.original_args()
+            ctx.network
+            ctx.train_dataset_element
+            ctx.loss_fn
+            ctx.net_outputs
+            breakpoint()
+        callbacks.append(LambdaCallback(on_train_step_end=LambdaCallback))
+
         logger.info(".........Starting Training Model..........")
         if get_real_rank() % 8 == 0:
             pprint(config)
