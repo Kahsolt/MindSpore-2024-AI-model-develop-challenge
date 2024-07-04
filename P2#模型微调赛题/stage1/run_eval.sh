@@ -7,8 +7,9 @@ python squad_data_process.py \
   --output_file /home/ma-user/work/squad8192.mindrecord \
   --mode eval \
   --max_length 8192 \
-  --tokenizer_type "llama3-8B" > test_eval_base.log 2>&1 &
+  --tokenizer_type "llama3-8B"
 
+cd /home/ma-user/work/mindformers
 python run_mindformer.py \
   --config research/llama3/predict_llama3_8b_800T_A2_64G.yaml \
   --run_mode eval \
@@ -17,7 +18,7 @@ python run_mindformer.py \
   --epochs 1 \
   --batch_size 1 \
   --use_parallel False \
-  --device_id 0
+  --device_id 0 > test_eval_base.log 2>&1 &
 
 
 # eval finetuned ability
