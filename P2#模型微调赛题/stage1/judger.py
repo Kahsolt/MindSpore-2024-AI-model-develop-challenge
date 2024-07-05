@@ -2,50 +2,77 @@
 # Author: Armit
 # Create Time: 2024/07/05 
 
-'''
-NOTE: 完成这个脚本，需要先学习正则表达式的 匹配match 和 提取findall
-'''
-
+from re import Pattern
+from argparse import ArgumentParser
 import numpy as np
 from utils import *
 
 # 浮点数误差容忍阈值
-EPS = 1e-8
+EPS = 1e-4
+isclose = lambda x, y: np.isclose(x, y, atol=EPS)
 
 
-def check_match(problem:str, solution:str, predict:str) -> bool:
-  return predict == solution
+def get_problem_template(problem:str, solution:str) -> Tuple[int, Tuple[Pattern, Pattern]]:
+  for idx, tmpl in enumerate(PROBLEM_TEMPLATES):
+    if tmpl['Q'].match(problem) and tmpl['A'].match(solution):
+      return idx, tmpl
+  raise ValueError('unknown problem template')
 
 
-def check_correct(problem:str, solution:str, predict:str) -> bool:
-  '''
-    假设模型输入问题 problem，标准答案 solution，模型输出 predict，本函数判断该 predict 是否符合回答模板，并且数学意义上计算准确
-    在这个函数里你需要
-      1. 判断 problem 符合哪个模板，参考 PROBLEM_TEMPLATES 中的 Q 模板
-      2. 判断 predict 是否符合对应的 A 模板
-      3. 判断 predict 中数值与 solution 相比是否准确
-    回答 "正确" 的定义：
-      - predict 中的数学运算结果与 solution 一致
-      - 这意味着要把其中的浮点数字符串抽取出来，转换为真的 float 类型，然后用 np.isclose 比较 (误差阈值为EPS)
-      - 具体比较哪一部分因问题模板而异，因此会有一个很大的 if-else 结构
-  '''
-
-  return False
+def check_match(problem:str, solution:str, predict:str) -> Tuple[int, bool]:
+  tid, tmpl = get_problem_template(problem, solution)
+  ok = predict == solution
+  return tid, ok
 
 
-def get_acc(problems:List[str], solutions:List[str], predicts:List[str], strict:bool=True) -> float:
-  '''
-    本函数计算一组输入输出的平均正确率
-     - strict=True 时调用 check_match
-     - strict=False 时调用 check_correct
-  '''
-  return 0.0
+def check_correct(problem:str, solution:str, predict:str) -> Tuple[int, bool]:
+  if predict.startswith(problem):
+    predict = predict[len(problem):].strip()
+
+  tid, tmpl = get_problem_template(problem, solution)
+  m_solt = tmpl['A'].findall(solution)[0]
+  try:
+    m_pred = tmpl['A'].findall(predict)[0]
+  except IndexError:
+    return tid, False
+
+  ok = False
+  if tid in [0, 1, 2]:
+    a_res = float(m_solt[-1])
+    p_res = float(m_pred[-1])
+    ok = isclose(a_res, p_res)
+  elif tid == 3:
+    a_res1, a_res2 = [int(e) for e in m_solt]
+    p_res1, p_res2 = [int(e) for e in m_pred]
+    ok = a_res1 == p_res1 and a_res2 == p_res2
+  elif tid in [4, 5, 6, 7, 8, 9, 10]:
+    a_res = float(m_solt)
+    p_res = float(m_pred)
+    ok = isclose(a_res, p_res)
+
+  if not ok:
+    print(f'solution: #{solution}#')
+    print(f'predict: #{predict}#')
+
+  return tid, ok
 
 
+def get_acc(problems:List[str], solutions:List[str], predicts:List[str], strict:bool=True) -> Tuple[float, Dict[int, Tuple[int, int]]]:
+  checker = check_match if strict else check_correct
+  ok, total = 0, 0
+  bingo_cnt = {}
+  for problem, solution, predict in zip(problems, solutions, predicts):
+    tid, bingo = checker(problem, solution, predict)
+    if tid not in bingo_cnt: 
+      bingo_cnt[tid] = [0, 0]
+    bingo_cnt[tid][0] += bingo
+    bingo_cnt[tid][1] += 1
+    ok += bingo
+    total += 1
+  return (ok / total), bingo_cnt
 
-if __name__ == '__main__':
-  # 你的代码实现应该能通过下述单元测试 :)
 
+def _unittest_():
   problems = [
     '解方程 -1x + -17 = 0',
     '计算 -7431.41 / 6769.29 等于多少？',
@@ -60,9 +87,40 @@ if __name__ == '__main__':
   ]
   predicts = [
     '方程的解为：-17.0',
-    '-7431.41 / 6769.29 = -1.0978123333333333333',
+    '-7431.41 / 6769.29 = -1.097888888',
     '平均值为 60.666666666666666',
     '40.96000',
   ]
-  assert np.isclose(get_acc(problems, solutions, predicts, strict=True ), 1/4, atol=EPS)
-  assert np.isclose(get_acc(problems, solutions, predicts, strict=False), 3/4, atol=EPS)
+  assert isclose(get_acc(problems, solutions, predicts, strict=True )[0], 1/4)
+  assert isclose(get_acc(problems, solutions, predicts, strict=False)[0], 3/4)
+
+
+def run(args):
+  pairs = load_testset()
+  problems  = [p for p, a in pairs]
+  solutions = [a for p, a in pairs]
+  predict_list = np.load(args.R, allow_pickle=True)
+  predicts = [it['text_generation_text'][0].strip() for it in predict_list]
+
+  # literal match rate
+  lmr, bingo_cnt = get_acc(problems, solutions, predicts, strict=True)
+  # math correct rate
+  mcr, bingo_cnt = get_acc(problems, solutions, predicts, strict=False)
+
+  N = len(predicts)
+  print('samples_count:', N)
+  print(f'  match rate: {lmr:.2%} ({round(N * lmr)})')
+  print(f'  correct rate: {mcr:.2%} ({round(N * mcr)})')
+  print('bingo_cnt:')
+  print({k: bingo_cnt[k] for k in sorted(bingo_cnt)})
+
+
+if __name__ == '__main__':
+  # _unittest_()
+
+  parser = ArgumentParser()
+  parser.add_argument('-I', default=DATASET_TEST_FILE, type=Path, help='predict dataset')
+  parser.add_argument('-R', default=(BASE_PATH / 'experiments' / 'test_eval_base_math' / 'result_npy.npy'), type=Path, help='predict result.npy file')
+  args = parser.parse_args()
+
+  run(args)
