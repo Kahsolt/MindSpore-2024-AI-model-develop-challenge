@@ -15,7 +15,7 @@ trainer:
 # runner config
 runner_config:
   epochs: 5
-  batch_size: 64
+  batch_size: 32
   sink_mode: True
   sink_size: 2
 
@@ -38,7 +38,7 @@ lr_schedule:
 train_dataset: &train_dataset
   data_loader:
     type: MindDataset
-    dataset_dir: "/home/ma-user/work/train-fastchat256-mindrecore.mindrecord"
+    dataset_dir: ""
     shuffle: True
   input_columns: ["input_ids", "labels"]  # "input_ids", "labels" , labels are used in instruction finetune.
   num_parallel_workers: 8
@@ -112,7 +112,7 @@ callbacks:
   - type: MFLossMonitor
   - type: CheckpointMointor
     prefix: "llama3_8b"
-    save_checkpoint_steps: 1400
+    save_checkpoint_steps: 535     # TODO: 根据数据集情况调整 = len(dataset)*epoch/bs/5
     integrated_save: False
     async_save: False
   - type: ObsMonitor

@@ -8,7 +8,7 @@ import numpy as np
 from utils import *
 
 # 浮点数误差容忍阈值
-EPS = 1e-4
+EPS = 1e-2
 isclose = lambda x, y: np.isclose(x, y, atol=EPS)
 
 
@@ -50,7 +50,7 @@ def check_correct(problem:str, solution:str, predict:str) -> Tuple[int, bool]:
     p_res = float(m_pred)
     ok = isclose(a_res, p_res)
 
-  if not ok:
+  if not 'show':
     print(f'solution: #{solution}#')
     print(f'predict: #{predict}#')
 

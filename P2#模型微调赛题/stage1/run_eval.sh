@@ -13,7 +13,7 @@ python squad_data_process.py \
 # eval pretrained ability (qa)
 cd /home/ma-user/work/mindformers
 python run_mindformer.py \
-  --config research/llama3/predict_llama3_8b_800T_A2_64G.yaml \
+  --config research/llama3/run_llama3_8b_8k_800T_A2_64G_lora_256_base_eval.yaml \
   --run_mode eval \
   --eval_dataset_dir /home/ma-user/work/squad8192.mindrecord \
   --load_checkpoint /home/ma-user/work/llama3-8B.ckpt \
@@ -24,11 +24,9 @@ python run_mindformer.py \
 
 
 # eval pretrained ability (math)
-cd /home/ma-user/work/mindformers/research/llama3
-wget -nc https://2024-ascend-innovation-contest-mindspore.obs.cn-southwest-2.myhuaweicloud.com/topic2-finetune/run_llama3_test.py
 cd /home/ma-user/work/mindformers/research
 python llama3/run_llama3_test.py \
-  --config llama3/predict_llama3_8b_800T_A2_64G_eval.yaml \
+  --config llama3/run_llama3_8b_8k_800T_A2_64G_lora_256_base_eval.yaml \
   --run_mode predict \
   --use_parallel False \
   --load_checkpoint /home/ma-user/work/llama3-8B.ckpt \
@@ -40,7 +38,7 @@ python llama3/run_llama3_test.py \
 # eval finetuned ability (qa)
 cd /home/ma-user/work/mindformers
 python run_mindformer.py \
-  --config research/llama3/predict_llama3_8b_800T_A2_64G.yaml \
+  --config research/llama3/run_llama3_8b_8k_800T_A2_64G_lora_256_eval.yaml \
   --run_mode eval \
   --eval_dataset_dir /home/ma-user/work/squad8192.mindrecord \
   --load_checkpoint /home/ma-user/work/new_llama3_8b_lora.ckpt \
@@ -53,7 +51,7 @@ python run_mindformer.py \
 # eval finetuned ability (math)
 cd /home/ma-user/work/mindformers/research
 python llama3/run_llama3_test.py \
-  --config llama3/predict_llama3_8b_800T_A2_64G_eval.yaml \
+  --config llama3/run_llama3_8b_8k_800T_A2_64G_lora_256_eval.yaml \
   --run_mode predict \
   --use_parallel False \
   --load_checkpoint /home/ma-user/work/new_llama3_8b_lora.ckpt \

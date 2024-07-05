@@ -16,3 +16,7 @@ mindformers/result_infer.npy
 # thesis
 thesis/*
 !thesis/*.cmd
+
+# ignore trainset, keep testset
+data_*.json
+!data_200_random.json

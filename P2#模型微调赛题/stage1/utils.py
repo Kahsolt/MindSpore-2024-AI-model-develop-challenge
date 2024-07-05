@@ -2,14 +2,27 @@
 # Author: Armit
 # Create Time: 2024/07/05 
 
+import sys
 import json
 from re import compile as Regex
 from pathlib import Path
 from typing import List, Tuple, Dict, Any
 
+import random
+import numpy as np
+SEED = 114514
+random.seed(SEED)
+np.random.seed(SEED)
+
+IS_WIN = sys.platform == 'win32'
+
 BASE_PATH = Path(__file__).parent
-DATASET_RAW_FILE = BASE_PATH / 'material' / 'train.json'
-DATASET_PROC_FILE = BASE_PATH / 'material' / 'train-data-conversation.json'
+if IS_WIN:
+  DATASET_RAW_FILE = BASE_PATH / 'material' / 'train.json'
+  DATASET_PROC_FILE = BASE_PATH / 'material' / 'train-data-conversation.json'
+else:
+  DATASET_RAW_FILE = BASE_PATH / 'train.json'
+  DATASET_PROC_FILE = BASE_PATH / 'train-data-conversation.json'
 DATASET_TEST_FILE = BASE_PATH / 'data_200_random.json'
 
 DEFAULT_SYSTEM_PROMPT = 'Below is an instruction that describes a task. Write a response that appropriately completes the request.'
