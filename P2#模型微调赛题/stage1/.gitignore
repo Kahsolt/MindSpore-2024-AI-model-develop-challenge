@@ -12,3 +12,7 @@ output/
 kernel_meta/
 mindformers/log.txt
 mindformers/result_infer.npy
+
+# thesis
+thesis/*
+!thesis/*.cmd
