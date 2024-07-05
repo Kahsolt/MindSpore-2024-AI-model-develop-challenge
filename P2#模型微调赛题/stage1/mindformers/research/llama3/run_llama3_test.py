@@ -140,12 +140,11 @@ def main(task='text_generation',
 
     if run_mode in ['train', 'finetune']:
         config.model.model_config.use_past = False
-    
-    
+
     # 22222222222222222222222222222222222
     # 加载json格式推理数据
     predict_data = []
-    
+
     with open(input_dir, 'r', encoding='utf-8') as file:
         # print(file)
         for line in file:
@@ -154,30 +153,19 @@ def main(task='text_generation',
             pro_list = line['problem']
             predict_data.append(pro_list)
 
-
     print("********************** infer list len: ", len(predict_data))
     # 22222222222222222222222222222222222
-    
 
     # start task
     if run_mode == 'train':
-        trainer = Trainer(args=config,
-                          task=task,
-                          train_dataset=train_dataset)
+        trainer = Trainer(args=config, task=task, train_dataset=train_dataset)
         trainer.train(train_checkpoint=ckpt, auto_trans_ckpt=config.auto_trans_ckpt, resume_training=resume)
     elif run_mode == 'finetune':
-        trainer = Trainer(args=config,
-                          task=task,
-                          train_dataset=train_dataset)
+        trainer = Trainer(args=config, task=task, train_dataset=train_dataset)
         trainer.finetune(finetune_checkpoint=ckpt, auto_trans_ckpt=config.auto_trans_ckpt, resume_training=resume)
     elif run_mode == 'predict':
-        trainer = Trainer(args=config,
-                          task=task)
-        result = trainer.predict(input_data=predict_data,
-                                 predict_checkpoint=ckpt,
-                                 auto_trans_ckpt=config.auto_trans_ckpt,
-                                 max_length=int(max_length),
-                                 batch_size=4)
+        trainer = Trainer(args=config, task=task)
+        result = trainer.predict(input_data=predict_data, predict_checkpoint=ckpt, auto_trans_ckpt=config.auto_trans_ckpt, max_length=int(max_length), batch_size=4)
         logger.info(result)
 
         fpath = "result_npy.npy"

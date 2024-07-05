@@ -10,6 +10,7 @@ from typing import List, Tuple, Dict, Any
 BASE_PATH = Path(__file__).parent
 DATASET_RAW_FILE = BASE_PATH / 'material' / 'train.json'
 DATASET_PROC_FILE = BASE_PATH / 'material' / 'train-data-conversation.json'
+DATASET_TEST_FILE = BASE_PATH / 'data_200_random.json'
 
 DEFAULT_SYSTEM_PROMPT = 'Below is an instruction that describes a task. Write a response that appropriately completes the request.'
 PROMPT_TEMPLATE = {

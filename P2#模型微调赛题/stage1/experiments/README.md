@@ -4,6 +4,8 @@
 
 ### baseline_eval (original task)
 
+⚠ runtime 1h7min = 67min = 4020s
+
 see [test_eval_base.log](./test_eval_base.log)
 
 ```
@@ -28,6 +30,34 @@ Generation Config is: {
 }
 
 F1 score: 59.87023775108988, Em score: 44.17029511369134, total_count: 2067
+```
+
+### baseline_eval (new task)
+
+⚠ runtime 16.76min = 1006s
+
+see [test_eval_base_math](./test_eval_base_math) folder
+
+```
+Generation Config is: {
+  'max_length': 512, 
+  'max_new_tokens': 20, 
+  'min_length': 0, 
+  'min_new_tokens': None, 
+  'num_beams': 1, 
+  'do_sample': False, 
+  'use_past': True, 
+  'temperature': 1.0, 
+  'top_k': 0, 
+  'top_p': 1, 
+  'repetition_penalty': 1, 
+  'encoder_repetition_penalty': 1.0, 
+  'renormalize_logits': False, 
+  'pad_token_id': 128002, 
+  'bos_token_id': 128000, 
+  'eos_token_id': 128001, 
+  '_from_model_config': True
+}
 ```
 
 
