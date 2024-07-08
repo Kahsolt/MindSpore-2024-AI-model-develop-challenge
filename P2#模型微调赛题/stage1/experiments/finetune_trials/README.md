@@ -4,142 +4,10 @@
 
 ### baseline finetune lora setting
 
+32 layers of `wq` and `wv`, each weight split to W_a and W_b, 32 * 4 = 128 matrices in total
+
 ```python
-Param_groups = {
-  "decay": {
-    "weight_decay": 0.0,
-    "params": [
-      "model.layers.0.attention.wq.mindpet_delta_lora_a",
-      "model.layers.0.attention.wq.mindpet_delta_lora_b",
-      "model.layers.0.attention.wv.mindpet_delta_lora_a",
-      "model.layers.0.attention.wv.mindpet_delta_lora_b",
-      "model.layers.1.attention.wq.mindpet_delta_lora_a",
-      "model.layers.1.attention.wq.mindpet_delta_lora_b",
-      "model.layers.1.attention.wv.mindpet_delta_lora_a",
-      "model.layers.1.attention.wv.mindpet_delta_lora_b",
-      "model.layers.2.attention.wq.mindpet_delta_lora_a",
-      "model.layers.2.attention.wq.mindpet_delta_lora_b",
-      "model.layers.2.attention.wv.mindpet_delta_lora_a",
-      "model.layers.2.attention.wv.mindpet_delta_lora_b",
-      "model.layers.3.attention.wq.mindpet_delta_lora_a",
-      "model.layers.3.attention.wq.mindpet_delta_lora_b",
-      "model.layers.3.attention.wv.mindpet_delta_lora_a",
-      "model.layers.3.attention.wv.mindpet_delta_lora_b",
-      "model.layers.4.attention.wq.mindpet_delta_lora_a",
-      "model.layers.4.attention.wq.mindpet_delta_lora_b",
-      "model.layers.4.attention.wv.mindpet_delta_lora_a",
-      "model.layers.4.attention.wv.mindpet_delta_lora_b",
-      "model.layers.5.attention.wq.mindpet_delta_lora_a",
-      "model.layers.5.attention.wq.mindpet_delta_lora_b",
-      "model.layers.5.attention.wv.mindpet_delta_lora_a",
-      "model.layers.5.attention.wv.mindpet_delta_lora_b",
-      "model.layers.6.attention.wq.mindpet_delta_lora_a",
-      "model.layers.6.attention.wq.mindpet_delta_lora_b",
-      "model.layers.6.attention.wv.mindpet_delta_lora_a",
-      "model.layers.6.attention.wv.mindpet_delta_lora_b",
-      "model.layers.7.attention.wq.mindpet_delta_lora_a",
-      "model.layers.7.attention.wq.mindpet_delta_lora_b",
-      "model.layers.7.attention.wv.mindpet_delta_lora_a",
-      "model.layers.7.attention.wv.mindpet_delta_lora_b",
-      "model.layers.8.attention.wq.mindpet_delta_lora_a",
-      "model.layers.8.attention.wq.mindpet_delta_lora_b",
-      "model.layers.8.attention.wv.mindpet_delta_lora_a",
-      "model.layers.8.attention.wv.mindpet_delta_lora_b",
-      "model.layers.9.attention.wq.mindpet_delta_lora_a",
-      "model.layers.9.attention.wq.mindpet_delta_lora_b",
-      "model.layers.9.attention.wv.mindpet_delta_lora_a",
-      "model.layers.9.attention.wv.mindpet_delta_lora_b",
-      "model.layers.10.attention.wq.mindpet_delta_lora_a",
-      "model.layers.10.attention.wq.mindpet_delta_lora_b",
-      "model.layers.10.attention.wv.mindpet_delta_lora_a",
-      "model.layers.10.attention.wv.mindpet_delta_lora_b",
-      "model.layers.11.attention.wq.mindpet_delta_lora_a",
-      "model.layers.11.attention.wq.mindpet_delta_lora_b",
-      "model.layers.11.attention.wv.mindpet_delta_lora_a",
-      "model.layers.11.attention.wv.mindpet_delta_lora_b",
-      "model.layers.12.attention.wq.mindpet_delta_lora_a",
-      "model.layers.12.attention.wq.mindpet_delta_lora_b",
-      "model.layers.12.attention.wv.mindpet_delta_lora_a",
-      "model.layers.12.attention.wv.mindpet_delta_lora_b",
-      "model.layers.13.attention.wq.mindpet_delta_lora_a",
-      "model.layers.13.attention.wq.mindpet_delta_lora_b",
-      "model.layers.13.attention.wv.mindpet_delta_lora_a",
-      "model.layers.13.attention.wv.mindpet_delta_lora_b",
-      "model.layers.14.attention.wq.mindpet_delta_lora_a",
-      "model.layers.14.attention.wq.mindpet_delta_lora_b",
-      "model.layers.14.attention.wv.mindpet_delta_lora_a",
-      "model.layers.14.attention.wv.mindpet_delta_lora_b",
-      "model.layers.15.attention.wq.mindpet_delta_lora_a",
-      "model.layers.15.attention.wq.mindpet_delta_lora_b",
-      "model.layers.15.attention.wv.mindpet_delta_lora_a",
-      "model.layers.15.attention.wv.mindpet_delta_lora_b",
-      "model.layers.16.attention.wq.mindpet_delta_lora_a",
-      "model.layers.16.attention.wq.mindpet_delta_lora_b",
-      "model.layers.16.attention.wv.mindpet_delta_lora_a",
-      "model.layers.16.attention.wv.mindpet_delta_lora_b",
-      "model.layers.17.attention.wq.mindpet_delta_lora_a",
-      "model.layers.17.attention.wq.mindpet_delta_lora_b",
-      "model.layers.17.attention.wv.mindpet_delta_lora_a",
-      "model.layers.17.attention.wv.mindpet_delta_lora_b",
-      "model.layers.18.attention.wq.mindpet_delta_lora_a",
-      "model.layers.18.attention.wq.mindpet_delta_lora_b",
-      "model.layers.18.attention.wv.mindpet_delta_lora_a",
-      "model.layers.18.attention.wv.mindpet_delta_lora_b",
-      "model.layers.19.attention.wq.mindpet_delta_lora_a",
-      "model.layers.19.attention.wq.mindpet_delta_lora_b",
-      "model.layers.19.attention.wv.mindpet_delta_lora_a",
-      "model.layers.19.attention.wv.mindpet_delta_lora_b",
-      "model.layers.20.attention.wq.mindpet_delta_lora_a",
-      "model.layers.20.attention.wq.mindpet_delta_lora_b",
-      "model.layers.20.attention.wv.mindpet_delta_lora_a",
-      "model.layers.20.attention.wv.mindpet_delta_lora_b",
-      "model.layers.21.attention.wq.mindpet_delta_lora_a",
-      "model.layers.21.attention.wq.mindpet_delta_lora_b",
-      "model.layers.21.attention.wv.mindpet_delta_lora_a",
-      "model.layers.21.attention.wv.mindpet_delta_lora_b",
-      "model.layers.22.attention.wq.mindpet_delta_lora_a",
-      "model.layers.22.attention.wq.mindpet_delta_lora_b",
-      "model.layers.22.attention.wv.mindpet_delta_lora_a",
-      "model.layers.22.attention.wv.mindpet_delta_lora_b",
-      "model.layers.23.attention.wq.mindpet_delta_lora_a",
-      "model.layers.23.attention.wq.mindpet_delta_lora_b",
-      "model.layers.23.attention.wv.mindpet_delta_lora_a",
-      "model.layers.23.attention.wv.mindpet_delta_lora_b",
-      "model.layers.24.attention.wq.mindpet_delta_lora_a",
-      "model.layers.24.attention.wq.mindpet_delta_lora_b",
-      "model.layers.24.attention.wv.mindpet_delta_lora_a",
-      "model.layers.24.attention.wv.mindpet_delta_lora_b",
-      "model.layers.25.attention.wq.mindpet_delta_lora_a",
-      "model.layers.25.attention.wq.mindpet_delta_lora_b",
-      "model.layers.25.attention.wv.mindpet_delta_lora_a",
-      "model.layers.25.attention.wv.mindpet_delta_lora_b",
-      "model.layers.26.attention.wq.mindpet_delta_lora_a",
-      "model.layers.26.attention.wq.mindpet_delta_lora_b",
-      "model.layers.26.attention.wv.mindpet_delta_lora_a",
-      "model.layers.26.attention.wv.mindpet_delta_lora_b",
-      "model.layers.27.attention.wq.mindpet_delta_lora_a",
-      "model.layers.27.attention.wq.mindpet_delta_lora_b",
-      "model.layers.27.attention.wv.mindpet_delta_lora_a",
-      "model.layers.27.attention.wv.mindpet_delta_lora_b",
-      "model.layers.28.attention.wq.mindpet_delta_lora_a",
-      "model.layers.28.attention.wq.mindpet_delta_lora_b",
-      "model.layers.28.attention.wv.mindpet_delta_lora_a",
-      "model.layers.28.attention.wv.mindpet_delta_lora_b",
-      "model.layers.29.attention.wq.mindpet_delta_lora_a",
-      "model.layers.29.attention.wq.mindpet_delta_lora_b",
-      "model.layers.29.attention.wv.mindpet_delta_lora_a",
-      "model.layers.29.attention.wv.mindpet_delta_lora_b",
-      "model.layers.30.attention.wq.mindpet_delta_lora_a",
-      "model.layers.30.attention.wq.mindpet_delta_lora_b",
-      "model.layers.30.attention.wv.mindpet_delta_lora_a",
-      "model.layers.30.attention.wv.mindpet_delta_lora_b",
-      "model.layers.31.attention.wq.mindpet_delta_lora_a",
-      "model.layers.31.attention.wq.mindpet_delta_lora_b",
-      "model.layers.31.attention.wv.mindpet_delta_lora_a",
-      "model.layers.31.attention.wv.mindpet_delta_lora_b"
-    ]
-  }
-}
+"model.layers.{idx}.attention.(wq|wv).mindpet_delta_lora_(a|b)",
 ```
 
 
@@ -147,19 +15,46 @@ Param_groups = {
 
 ⚪ run-0
 
-⚠ runtime   
-ℹ train speed: 5.66398 samples/s/p on NPU*4(32G)  
+see [run-0/text_generation_result.txt](./run-0/text_generation_result.txt)
 
 ```
+prompt: Below is an instruction that describes a task. Write a response that appropriately completes the request.
 data: uniform_pick_17145
 epoch: 5
 bs: 32
 lr: 1e-5
+target_modules: .*wq|.*wv
 n_param: 3407872
 
+finetune speed: 5.66398 samples/s/p on NPU*4(32G)
+finetune runtime: 1h23m57s = 1.3992h = 83.95min = 5037s
+predict runtime: 15.15min = 909s
+
+[EPS=1e-2]
 samples_count: 200
-  match rate: 0.00% (0)
-  correct rate: 20.00% (40)
+correct rate: 7.50% (15)
 bingo_cnt:
-{0: [39, 137], 1: [0, 17], 2: [0, 12], 4: [0, 7], 5: [0, 13], 6: [0, 3], 7: [0, 4], 8: [1, 1], 9: [0, 5], 10: [0, 1]}
+{0: [14, 137], 1: [0, 17], 2: [0, 12], 4: [1, 7], 5: [0, 13], 6: [0, 3], 7: [0, 4], 8: [0, 1], 9: [0, 5], 10: [0, 1]}
+```
+
+⚪ run-1
+
+```
+prompt: Below is a simple grade school math problem. Directly show the correct answer.
+data: arith_15000
+epoch: 5
+bs: 64
+lr: 1e-4
+lora_dropout: 0.05
+target_modules: .*wq|.*wv|.*wk
+n_param: 4718592
+
+finetune speed: 5.04060 samples/s/p on NPU*4(32G)
+finetune runtime: 1h24min9s = 1.4025h = 84.15min = 5049s
+predict runtime: 14.05min = 843s
+
+[EPS=1e-2]
+correct rate: 0.00% (0)
+bingo_cnt:
+{0: [0, 137], 1: [0, 17], 2: [0, 12], 4: [0, 7], 5: [0, 13], 6: [0, 3], 7: [0, 4], 8: [0, 1], 9: [0, 5], 10: [0, 1]}
 ```

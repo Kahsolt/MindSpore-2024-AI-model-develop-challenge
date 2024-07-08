@@ -75,10 +75,28 @@ def make_trainset_uniform_pick():
   write_data_subset(subset, BASE_PATH / f'data_uniform_pick_{nlen}.json')
 
 
+def make_trainset_arith(N:int=15000):
+  # [359347]
+  pairs_raw_ch = load_dataset_raw()
+  arith_problems: List = []
+  for prb, ans in pairs_raw_ch:
+    idx, tmpl = get_problem_template(prb, ans)
+    if idx != 0: continue
+    arith_problems.append((prb, ans))
+
+  subset = random.sample(arith_problems, N)
+  nlen = len(subset)
+  print('len(subset):', nlen)
+
+  write_data_subset(subset, BASE_PATH / f'data_arith_{nlen}.json')
+
+
 if __name__ == '__main__':
+  TRAINSET_MAKER = [name[len('make_trainset_'):] for name in globals() if name.startswith('make_trainset_')]
+
   parser = ArgumentParser()
   parser.add_argument('--split', default='test', choices=['test', 'train'])
-  parser.add_argument('--maker', choices=['uniform_pick'])
+  parser.add_argument('--maker', choices=TRAINSET_MAKER)
   args = parser.parse_args()
 
   suffix = f'_{args.maker}' if args.maker else ''

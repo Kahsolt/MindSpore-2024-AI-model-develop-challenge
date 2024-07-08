@@ -37,20 +37,23 @@ def check_correct(problem:str, solution:str, predict:str) -> Tuple[int, bool]:
     return tid, False
 
   ok = False
-  if tid in [0, 1, 2]:
-    a_res = float(m_solt[-1])
-    p_res = float(m_pred[-1])
-    ok = isclose(a_res, p_res)
-  elif tid == 3:
-    a_res1, a_res2 = [int(e) for e in m_solt]
-    p_res1, p_res2 = [int(e) for e in m_pred]
-    ok = a_res1 == p_res1 and a_res2 == p_res2
-  elif tid in [4, 5, 6, 7, 8, 9, 10]:
-    a_res = float(m_solt)
-    p_res = float(m_pred)
-    ok = isclose(a_res, p_res)
+  try:
+    if tid in [0, 1, 2]:
+      a_res = float(m_solt[-1])
+      p_res = float(m_pred[-1])
+      ok = isclose(a_res, p_res)
+    elif tid == 3:
+      a_res1, a_res2 = [int(e) for e in m_solt]
+      p_res1, p_res2 = [int(e) for e in m_pred]
+      ok = a_res1 == p_res1 and a_res2 == p_res2
+    elif tid in [4, 5, 6, 7, 8, 9, 10]:
+      a_res = float(m_solt)
+      p_res = float(m_pred)
+      ok = isclose(a_res, p_res)
+  except ValueError:
+    return tid, False
 
-  if not 'show':
+  if not ok and 'show':
     print(f'solution: #{solution}#')
     print(f'predict: #{predict}#')
 

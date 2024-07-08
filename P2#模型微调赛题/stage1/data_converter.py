@@ -18,9 +18,15 @@ PROMPT_DICT = {
         "### Instruction:\n{instruction}\n\n### Input:\n{input}\n\n### Response:"
     ),
 
+    #"prompt_no_input": (
+    #    "Below is an instruction that describes a task. "
+    #    "Write a response that appropriately completes the request.\n\n"
+    #    "### Instruction:\n{problem}\n\n### Response:"
+    #),
+
     "prompt_no_input": (
-        "Below is an instruction that describes a task. "
-        "Write a response that appropriately completes the request.\n\n"
+        "Below is a simple grade school math problem. "
+        "Directly show the correct answer.\n\n"
         "### Instruction:\n{problem}\n\n### Response:"
     ),
 

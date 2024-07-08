@@ -8,6 +8,10 @@ export TRAIN_DATA_DB=train-unipick17145.mindrecord
 export TRAIN_DATA_IN_JSON=data_uniform_pick_17145.json
 export TRAIN_DATA_OUT_JSON=data_uniform_pick_17145.out.json
 
+export TRAIN_DATA_DB=train-arith15000.mindrecord
+export TRAIN_DATA_IN_JSON=data_arith_15000.json
+export TRAIN_DATA_OUT_JSON=data_arith_15000.out.json
+
 
 # make train data db
 cd /home/ma-user/work/
@@ -52,3 +56,4 @@ python mindformers/tools/transform_ckpt.py \
   --prefix "new_"
 
 mv /home/ma-user/work/mindformers/research/output/checkpoint/rank_0/new_0.ckpt /home/ma-user/work/new_llama3_8b_lora.ckpt
+mv /home/ma-user/work/mindformers/research/output /home/ma-user/work/finetune_logs/run-114514
