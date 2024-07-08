@@ -1,0 +1,20 @@
+{
+    "input_token_lengths": {
+        "max": 192,
+        "min": 4,
+        "avg": 19.95,
+        "median": 16,
+        "mode": 12,
+        "variance": 214.2315,
+        "std_dev": 14.636649206700282
+    },
+    "output_token_lengths": {
+        "max": 504,
+        "min": 1,
+        "avg": 65.39066666666666,
+        "median": 46,
+        "mode": 2,
+        "variance": 4070.3140462222223,
+        "std_dev": 63.799012893791875
+    }
+}
