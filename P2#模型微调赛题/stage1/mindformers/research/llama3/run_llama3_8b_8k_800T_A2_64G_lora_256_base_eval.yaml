@@ -15,7 +15,7 @@ trainer:
 # runner config
 runner_config:
   epochs: 1
-  batch_size: 1
+  batch_size: 16
   sink_mode: True
   sink_size: 2
 
@@ -44,7 +44,7 @@ train_dataset: &train_dataset
   num_parallel_workers: 8
   python_multiprocessing: False
   drop_remainder: True
-  batch_size: 1
+  batch_size: 16
   repeat: 1
   numa_enable: False
   prefetch_size: 1
@@ -134,7 +134,7 @@ context:
 model:
   model_config:
     type: LlamaConfig
-    batch_size: 1 # add for increase predict
+    batch_size: 16 # add for increase predict
     seq_length: 8192
     hidden_size: 4096
     num_layers: 32

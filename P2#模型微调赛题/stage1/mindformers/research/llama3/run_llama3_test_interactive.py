@@ -15,7 +15,6 @@
 """Llama3 Train/Finetune/Predict scripts."""
 import os
 import sys
-import shutil
 import argparse
 import json
 import numpy as np
@@ -29,36 +28,7 @@ from mindformers.tools.cloud_adapter import cloud_monitor
 from mindformers.core.context import build_context
 from mindformers.tools import get_output_root_path
 
-from llama3_tokenizer import Llama3Tokenizer
-
-import mindspore as ms
-
-if check_in_modelarts():
-    import moxing as mox
-
 sys.path.insert(0, os.getcwd().split('research')[0])
-
-
-def clear_auto_trans_output(config):
-    """clear transformed_checkpoint and strategy"""
-    if check_in_modelarts():
-        obs_strategy_dir = os.path.join(config.remote_save_url, "strategy")
-        if mox.file.exists(obs_strategy_dir) and config.local_rank == 0:
-            mox.file.remove(obs_strategy_dir, recursive=True)
-            mox.file.make_dirs(obs_strategy_dir)
-        obs_transformed_ckpt_dir = os.path.join(config.remote_save_url, "transformed_checkpoint")
-        if mox.file.exists(obs_transformed_ckpt_dir) and config.local_rank == 0:
-            mox.file.remove(obs_transformed_ckpt_dir, recursive=True)
-            mox.file.make_dirs(obs_transformed_ckpt_dir)
-    else:
-        strategy_dir = os.path.join(get_output_root_path(), "strategy")
-        if os.path.exists(strategy_dir) and config.local_rank == 0:
-            shutil.rmtree(strategy_dir)
-            os.makedirs(strategy_dir, exist_ok=True)
-        transformed_ckpt_dir = os.path.join(get_output_root_path(), "transformed_checkpoint")
-        if os.path.exists(transformed_ckpt_dir) and config.local_rank == 0:
-            shutil.rmtree(transformed_ckpt_dir)
-            os.makedirs(transformed_ckpt_dir, exist_ok=True)
 
 
 def context_init(use_parallel=False, optimizer_parallel=False, device_id=0):
@@ -95,8 +65,7 @@ def main(task='text_generation',
          data_parallel=None,
          model_parallel=None,
          pipeline_stage=None,
-         micro_batch_num=None,
-         input_dir=''):
+         micro_batch_num=None):
     """main function."""
 
     assert os.path.exists(config) and config.endswith(('.yaml', '.yml'))
@@ -138,46 +107,16 @@ def main(task='text_generation',
     # init context
     build_context(config)
 
-    if run_mode in ['train', 'finetune']:
-        config.model.model_config.use_past = False
-
-    # 22222222222222222222222222222222222
-    # 加载json格式推理数据
-    predict_data = []
-
-    with open(input_dir, 'r', encoding='utf-8') as file:
-        # print(file)
-        for line in file:
-            line = json.loads(line)
-            # print(line['problem'])
-            pro_list = line['problem']
-            predict_data.append(pro_list)
-
-    print("********************** infer list len: ", len(predict_data))
-    # 22222222222222222222222222222222222
-
-    # start task
-    if run_mode == 'train':
-        trainer = Trainer(args=config, task=task, train_dataset=train_dataset)
-        trainer.train(train_checkpoint=ckpt, auto_trans_ckpt=config.auto_trans_ckpt, resume_training=resume)
-    elif run_mode == 'finetune':
-        trainer = Trainer(args=config, task=task, train_dataset=train_dataset)
-        trainer.finetune(finetune_checkpoint=ckpt, auto_trans_ckpt=config.auto_trans_ckpt, resume_training=resume)
-    elif run_mode == 'predict':
+    try:
+        print()
         trainer = Trainer(args=config, task=task)
-        result = trainer.predict(input_data=predict_data, predict_checkpoint=ckpt, auto_trans_ckpt=config.auto_trans_ckpt, max_length=int(max_length), batch_size=4)
-        logger.info(result)
-
-        # debacth
-        result_flatten = []
-        for it in result:
-            for e in it['text_generation_text']:
-                result_flatten.append({'text_generation_text': e})
-        result = result_flatten
-
-        fpath = "result_npy.npy"
-        with open(fpath, 'wb') as f:
-            np.save(f, result)
+        while True:
+            q = input('>> input your question: ').strip()
+            if not q: continue
+            result = trainer.predict(input_data=[q], predict_checkpoint=ckpt, auto_trans_ckpt=config.auto_trans_ckpt, max_length=int(max_length))
+            print('<<', result[0])
+    except KeyboardInterrupt:
+        print('[Exit]')
 
 
 if __name__ == "__main__":
@@ -224,10 +163,6 @@ if __name__ == "__main__":
                         help='pipeline stage')
     parser.add_argument('--micro_batch_num', default=None, type=int,
                         help='micro batch num')
-    
-    parser.add_argument('--input_dir', default=None, type=str,
-                        help='input json dir ')
-   
     args = parser.parse_args()
 
     main(task=args.task,
@@ -249,5 +184,4 @@ if __name__ == "__main__":
          data_parallel=args.dp,
          model_parallel=args.mp,
          pipeline_stage=args.pp,
-         micro_batch_num=args.micro_batch_num,
-         input_dir=args.input_dir)
+         micro_batch_num=args.micro_batch_num)

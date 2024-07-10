@@ -58,3 +58,14 @@ python llama3/run_llama3_test.py \
   --vocab_file /home/ma-user/work/tokenizer.model \
   --auto_trans_ckpt False \
   --input_dir "/home/ma-user/work/data_200_random.json" > test_eval_finetune_math.log 2>&1 &
+
+
+# eval finetuned ability (math, interactive)
+cd /home/ma-user/work/mindformers/research
+python llama3/run_llama3_test_interactive.py \
+  --config llama3/run_llama3_8b_8k_800T_A2_64G_lora_256_eval.yaml \
+  --run_mode predict \
+  --use_parallel False \
+  --load_checkpoint /home/ma-user/work/new_llama3_8b_lora.ckpt \
+  --vocab_file /home/ma-user/work/tokenizer.model \
+  --auto_trans_ckpt False

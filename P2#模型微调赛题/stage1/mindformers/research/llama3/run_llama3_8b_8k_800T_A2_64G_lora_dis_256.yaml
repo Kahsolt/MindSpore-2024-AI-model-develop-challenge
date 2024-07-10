@@ -29,7 +29,7 @@ optimizer:
 # lr sechdule
 lr_schedule:
   type: CosineWithWarmUpLR
-  learning_rate: 1.e-4
+  learning_rate: 3.e-5
   lr_end: 0.0
   warmup_ratio: 0.03
   total_steps: -1 # -1 means it will load the total steps of the dataset
@@ -112,7 +112,7 @@ callbacks:
   - type: MFLossMonitor
   - type: CheckpointMointor
     prefix: "llama3_8b"
-    save_checkpoint_steps: 535     # TODO: 根据数据集情况调整 = len(dataset)*epoch/bs/5
+    save_checkpoint_steps: 3000     # TODO: 根据数据集情况调整 = len(dataset)*epoch/bs/5
     integrated_save: False
     async_save: False
   - type: ObsMonitor
