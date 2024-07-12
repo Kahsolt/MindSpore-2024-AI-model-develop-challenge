@@ -1,0 +1,19 @@
+@ECHO OFF
+
+REM init env locally
+
+CD %~dp0
+SET WORK=%CD%
+
+REM local machine cannot run real infer :(
+SET DEBUG_WIN=1
+SET ENABLE_CELL_REUSE=1
+
+SET PYTHONPATH=%WORK%\mindformers
+SET GRAPH_OP_RUN=1
+SET MS_ENABLE_INTERNAL_KERNELS=on
+
+ECHO PYTHONPATH=%PYTHONPATH%
+ECHO WORK=%WORK%
+
+CMD /K conda activate llm
