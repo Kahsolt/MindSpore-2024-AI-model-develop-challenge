@@ -2,9 +2,6 @@ seed: 0
 output_dir: './output' # path to save checkpoint/strategy
 load_checkpoint: ''
 src_strategy_path_or_dir: ''
-auto_trans_ckpt: False  # If true, auto transform load_checkpoint to load in distributed model
-only_save_strategy: False
-resume_training: False
 run_mode: 'predict'
 
 # trainer config
@@ -14,118 +11,28 @@ trainer:
 
 # runner config
 runner_config:
-  epochs: 2
+  epochs: 1
   batch_size: 1
   sink_mode: True
   sink_size: 2
-  gradient_accumulation_steps: 8
-
-# optimizer
-optimizer:
-  type: FP32StateAdamWeightDecay
-  beta1: 0.9
-  beta2: 0.95
-  eps: 1.e-8
-  learning_rate: 5.e-5
-
-# lr sechdule
-lr_schedule:
-  type: CosineWithWarmUpLR
-  learning_rate: 5.e-5
-  lr_end: 0
-  warmup_ratio: 0.03
-  total_steps: -1 # -1 means it will load the total steps of the dataset
-
-# dataset
-train_dataset: &train_dataset
-  data_loader:
-    type: MindDataset
-    dataset_dir: ""
-    shuffle: True
-  input_columns: ["input_ids"]  # "input_ids", "labels" , labels are used in instruction finetune.
-  num_parallel_workers: 8
-  python_multiprocessing: False
-  drop_remainder: True
-  batch_size: 1
-  repeat: 1
-  numa_enable: False
-  prefetch_size: 1
-train_dataset_task:
-  type: CausalLanguageModelDataset
-  dataset_config: *train_dataset
-# if True, do evaluate during the training process. if false, do nothing.
-# note that the task trainer should support _evaluate_in_training function.
-do_eval: False
-
-# eval dataset
-eval_dataset: &eval_dataset
-  data_loader:
-    type: MindDataset
-    dataset_dir: ""
-    shuffle: False
-  input_columns: ["input_ids"]
-  num_parallel_workers: 8
-  python_multiprocessing: False
-  drop_remainder: False
-  repeat: 1
-  numa_enable: False
-  prefetch_size: 1
-eval_dataset_task:
-  type: CausalLanguageModelDataset
-  dataset_config: *eval_dataset
-
-use_parallel: False
-# parallel context config
-parallel:
-  parallel_mode: 1 # 0-data parallel, 1-semi-auto parallel, 2-auto parallel, 3-hybrid parallel
-  gradients_mean: False
-  enable_alltoall: False
-  full_batch: True
-  search_mode: "sharding_propagation"
-  enable_parallel_optimizer: True
-  strategy_ckpt_save_file: "./ckpt_strategy.ckpt"
-  parallel_optimizer_config:
-    gradient_accumulation_shard: False
-    parallel_optimizer_threshold: 64
-# default parallel of device num = 8 for Atlas 800T A2
-parallel_config:
-  data_parallel: 8
-  model_parallel: 1
-  pipeline_stage: 1
-  use_seq_parallel: False
-  micro_batch_num: 1
-  vocab_emb_dp: True
-  gradient_aggregation_group: 4
-# when model parallel is greater than 1, we can set micro_batch_interleave_num=2, that may accelerate the train process.
-micro_batch_interleave_num: 1
 
 # recompute config
 recompute_config:
-  recompute: False
+  recompute: True
   select_recompute: True
-  parallel_optimizer_comm_recompute: False
-  mp_comm_recompute: False
-  recompute_slice_activation: False
-
-# callbacks
-callbacks:
-  - type: MFLossMonitor
-  - type: CheckpointMointor
-    prefix: "llama2_7b"
-    save_checkpoint_steps: 100
-    integrated_save: False
-    async_save: False
-  - type: ObsMonitor
+  parallel_optimizer_comm_recompute: True
+  mp_comm_recompute: True
+  recompute_slice_activation: True
 
 # mindspore context init config
 context:
-  mode: 0 #0--Graph Mode; 1--Pynative Mode
+  mode: 0                       # 0--Graph Mode; 1--Pynative Mode
   device_target: "Ascend"
-  enable_graph_kernel: False
+  enable_graph_kernel: True
   graph_kernel_flags: "--disable_expand_ops=Softmax,Dropout --enable_parallel_fusion=true --reduce_fuse_depth=8 --enable_auto_tensor_inplace=true"
   max_call_depth: 10000
   max_device_memory: "28GB"
-  save_graphs: False
+  save_graphs: True
   save_graphs_path: "./graph"
   device_id: 0
 
@@ -134,7 +41,7 @@ model:
   model_config:
     type: LlamaConfig
     batch_size: 1 # add for increase predict
-    seq_length: 4096
+    seq_length: 512
     hidden_size: 4096
     num_layers: 32
     num_heads: 32
@@ -160,7 +67,7 @@ model:
     offset: 0
     checkpoint_name_or_path: "/home/ma-user/work/checkpoint_download/llama2/llama2_7b.ckpt"
     repetition_penalty: 1
-    max_decode_length: 512
+    max_decode_length: 504
     top_k: 3
     top_p: 1
     do_sample: True
@@ -177,10 +84,6 @@ processor:
     type: LlamaTokenizer
   type: LlamaProcessor
 
-# metric
-metric:
-  type: PerplexityMetric
-
 # wrapper cell config
 runner_wrapper:
   type: MFTrainOneStepCell
@@ -191,13 +94,6 @@ runner_wrapper:
     scale_window: 1000
   use_clip_grad: True
 
-eval_callbacks:
-  - type: ObsMonitor
-
-auto_tune: False
-filepath_prefix: './autotune'
-autotune_per_step: 10
-
 profile: False
 profile_start_step: 1
 profile_stop_step: 10
@@ -207,6 +103,3 @@ profile_memory: True
 layer_scale: False
 layer_decay: 0.65
 lr_scale_factor: 256
-
-# aicc
-remote_save_url: "Please input obs url on AICC platform."

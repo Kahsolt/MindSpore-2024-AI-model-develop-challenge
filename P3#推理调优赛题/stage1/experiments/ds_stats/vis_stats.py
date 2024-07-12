@@ -13,32 +13,28 @@ from mindformers import LlamaTokenizer
 parser = argparse.ArgumentParser(description="Read the first 1500 entries from task1, or the first 500 entries from task2.")
 parser.add_argument("-T", "--task", help="Task number. 1 for alpaca_5010.json, 2 for alpaca_521.json", required=True, type=int)
 args = parser.parse_args()
-task = args.task
-grandparent_dir = os.path.dirname(os.path.dirname(os.getcwd()))
 
 # 请确保cut是偶数
-if   task == 1:
+if   args.task == 1:
     cut = 1500
-    data_path = grandparent_dir + "/performance_serving/alpaca_5010.json"
-elif task == 2:
+    data_path = "../../performance_serving/alpaca_5010.json"
+elif args.task == 2:
     cut = 500
-    data_path = grandparent_dir + "/performance_serving/alpaca_521.json"
+    data_path = "../../performance_serving/alpaca_521.json"
 else:
     raise ValueError("Invalid task number")
-    
-# 定义初始化分词器的函数
-def init_tokenizer():
-    return LlamaTokenizer(grandparent_dir + "/performance_serving/tokenizer.model")
+
 
 # 定义读取数据集并分析token序列长度的函数
-def analyze_data(tokenizer):
+def analyze_data():
+    # 定义初始化分词器
+    tokenizer = LlamaTokenizer("../../performance_serving/tokenizer.model")
+
     # 读取数据集
     with open(data_path, "r", encoding="utf-8") as f:
         alpaca_data = json.load(f)[:cut]
-        
+
     # 分析token序列长度
-    INPUTS_DATA  = []
-    OUTPUTS_DATA = []
     input_token_lengths  = []
     output_token_lengths = []
 
@@ -49,7 +45,8 @@ def analyze_data(tokenizer):
 
     return input_token_lengths, output_token_lengths
 
-input_token_lengths, output_token_lengths = analyze_data(init_tokenizer())
+input_token_lengths, output_token_lengths = analyze_data()
+breakpoint()
 
 # 定义绘制并保存直方图和折线图的函数
 def plot_hist_and_line(input_token_lengths, output_token_lengths):
@@ -68,7 +65,7 @@ def plot_hist_and_line(input_token_lengths, output_token_lengths):
     plt.ylabel("Frequency")
 
     plt.tight_layout()
-    plt.savefig(os.path.basename(data_path).replace(".json", "_"+str(cut)+"_"+'Token_Length_Histogram.png'), dpi=300)
+    plt.savefig(os.path.basename(data_path).replace(".json", f"_{cut}_Token_Length_Histogram.png"), dpi=300)
 
     # 绘制折线图
     plt.figure(figsize=(12, 6))
@@ -87,7 +84,7 @@ def plot_hist_and_line(input_token_lengths, output_token_lengths):
     plt.ylabel("Token Length")
 
     plt.tight_layout()
-    plt.savefig(os.path.basename(data_path).replace(".json", "_"+str(cut)+"_"+'Token_Length_Line_Plot.png'), dpi=300)
+    plt.savefig(os.path.basename(data_path).replace(".json", f"_{cut}_Token_Length_Line_Plot.png"), dpi=300)
 
 plot_hist_and_line(input_token_lengths, output_token_lengths)
 
@@ -116,9 +113,7 @@ def save_stats(input_token_lengths, output_token_lengths):
     return stats
 
 stats = save_stats(input_token_lengths, output_token_lengths)
-stats_path = os.path.basename(data_path).replace(".json", "_"+str(cut)+"_"+"stats.json")
+stats_path = os.path.basename(data_path).replace(".json", f"_{cut}_stats.json")
 
 with open(stats_path, "w", encoding="utf-8") as of:
     json.dump(stats, of, indent=4, ensure_ascii=False)
-    
-    

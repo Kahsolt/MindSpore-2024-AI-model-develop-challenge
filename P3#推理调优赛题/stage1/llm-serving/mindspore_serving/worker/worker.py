@@ -118,7 +118,7 @@ class Worker:
             input_ids = self._padding(input_ids, seq_length, default_padding_values)
             self.valid_length, self.batch_size = self._get_valid_length(input_ids, default_padding_values)
             current_index_ = [self.valid_length[i] - 1 + i * seq_length for i in range(self.batch_size)]
-            self.current_index = np.array(current_index_, np.int32)
+            self.current_index = np.asarray(current_index_, np.int32)
         # If target length exceeds seq_length, use seq_length instead
         # A list of the frequency of each token
         # For first graph, not_init should be false
@@ -126,17 +126,15 @@ class Worker:
         init = init_true and not is_prefill
         logging.info("pre-process time is {} ".format((time.time() - time_start) * 1000))
 
-        mask_time = time.time()
         extra_input_list = self.extra_func.get_extra_inputs(input_ids, self.current_index, init, is_prefill,
                                                             self.valid_length,
                                                             zactivate_len=self.config.model_config.zactivate_len)
         if extra_input_list is None:
             logging.error('extra inputs by customer is None,please check it in server config!')
-        logging.info("mask time is {} ".format((time.time() - mask_time) * 1000))
 
         # Call a single inference with input size of (bs, seq_length)
         call = time.time()
-        result, shm = self.model.call(self.shms, np.array(input_ids, np.int32), self.current_index,
+        result, shm = self.model.call(self.shms, np.asarray(input_ids, np.int32), self.current_index,
                                       self.valid_length, init, is_prefill, valid_batch_flag,
                                       extra_inputs=extra_input_list, current_batch_size=current_batch_size,
                                       **generate_parms)

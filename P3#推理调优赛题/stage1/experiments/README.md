@@ -4,6 +4,13 @@
 
 ----
 
+### run_llama_infer 测试
+
+> 环境: 云端
+
+参考 [run_llama_infer](./run_llama_infer/) 目录
+
+
 ### 基线复现
 
 > 环境: 云端/本地

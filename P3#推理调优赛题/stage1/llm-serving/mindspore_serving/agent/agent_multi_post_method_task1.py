@@ -612,11 +612,10 @@ class WorkAgent:
                 self.decode_params_map[decode_params.decode_index] = decode_params
                 init_reset.append(decode_params.init_reset)
                 decode_index.append(decode_params.decode_index)
-            init_reset = np.array(init_reset, dtype=np.bool_)
-            decode_index_np = np.array(decode_index, dtype=np.int64)
+            init_reset = np.asarray(init_reset, dtype=np.bool_)
+            decode_index_np = np.asarray(decode_index, dtype=np.int64)
         else:
-            # keep decode map size equal to current batch size
-            # extend
+            # keep decode map size equal to current batch size extend
             current_index = []
             valid_length = []
             init_reset = []
@@ -633,7 +632,7 @@ class WorkAgent:
                 input_ids = np.ndarray((before_batch_size,), dtype=np.int32, buffer=output_shm.buf)
                 pad_input_id = self.config.model_config.end_token
                 add_length = self.current_batch_size - before_batch_size
-                addition_input_ids = np.array(add_length * [pad_input_id], dtype=np.int32)
+                addition_input_ids = np.asarray(add_length * [pad_input_id], dtype=np.int32)
                 input_ids = np.append(input_ids, addition_input_ids)
                 target_batch = self.current_batch_size
                 pad_key = list(self.decode_params_map.keys())[-1]
@@ -676,13 +675,13 @@ class WorkAgent:
                                                                          valid_length,
                                                                          zactivate_len=self.config.model_config.zactivate_len)
 
-            current_index = np.array(current_index, dtype=np.int32)
+            current_index = np.asarray(current_index, dtype=np.int32)
             if self.config.model_config.current_index or self.config.model_config.backend == "kbk":
-                valid_length = np.array(valid_length, dtype=np.int64)
+                valid_length = np.asarray(valid_length, dtype=np.int64)
             else:
-                valid_length = np.array(valid_length, dtype=np.int32)
-            init_reset = np.array(init_reset, dtype=np.bool_)
-            decode_index_np = np.array(decode_index, dtype=np.int64)
+                valid_length = np.asarray(valid_length, dtype=np.int32)
+            init_reset = np.asarray(init_reset, dtype=np.bool_)
+            decode_index_np = np.asarray(decode_index, dtype=np.int64)
             input_ids = input_ids.reshape((-1, 1))
             # 加入PA特性
             if self.config.model_config.page_attention:

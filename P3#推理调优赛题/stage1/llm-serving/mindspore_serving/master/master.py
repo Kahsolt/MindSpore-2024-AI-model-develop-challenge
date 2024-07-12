@@ -309,8 +309,8 @@ class AsyncMaster(Master):
 
         if prompt_data_count == 0:
             return input_entry_metadata_list, index_list
-        logging.debug("_get_prompt_batch_list prompt index_list {}, input_entry_metadata_list {}"
-                      .format(index_list, input_entry_metadata_list))
+        #logging.debug("_get_prompt_batch_list prompt index_list {}, input_entry_metadata_list {}"
+        #              .format(index_list, input_entry_metadata_list))
 
         prefill_batch_size_list = self.config.model_config.prefill_batch_size
         if prefill_batch_size_list is None or len(prefill_batch_size_list) == 0:
@@ -391,28 +391,28 @@ class AsyncMaster(Master):
         e_t_e_time = time.time()
 
         prompt_token_empty_list = self._check_prompt_token_empty(entry_metadata_list, self.config.model_config.pad_token_id)
-        logging.debug("prompt token empty list index_list {}".format(prompt_token_empty_list))
+        #logging.debug("prompt token empty list index_list {}".format(prompt_token_empty_list))
         if len(prompt_token_empty_list) > 0:
             return self._postprocess([INPUT_EMPTY_TOKEN], entry_metadata_list=entry_metadata_list, index_list=prompt_token_empty_list, skip_inference=True)
 
         # check prefill out of range data
         out_of_range_index_list = self._check_prompt_out_of_range_index_list(entry_metadata_list)
-        logging.debug("out of range prompt index_list {}".format(out_of_range_index_list))
+        #logging.debug("out of range prompt index_list {}".format(out_of_range_index_list))
         if len(out_of_range_index_list) > 0:
             return self._postprocess([INPUT_OUT_OF_TOKEN], entry_metadata_list=entry_metadata_list, index_list=out_of_range_index_list, skip_inference=True)
 
         # filter prompt data batch list
         input_entry_metadata_list, index_list = self._get_prompt_batch_list(entry_metadata_list)
-        logging.debug("_get_prompt_batch_list prompt index_list {}, input_entry_metadata_list {}".format(index_list, input_entry_metadata_list))
+        #logging.debug("_get_prompt_batch_list prompt index_list {}, input_entry_metadata_list {}".format(index_list, input_entry_metadata_list))
         # prefill predict
         if len(input_entry_metadata_list) > 0:
-            logging.debug('prefill len of input entry_metadata_list is {}'.format(len(input_entry_metadata_list)))
+            #logging.debug('prefill len of input entry_metadata_list is {}'.format(len(input_entry_metadata_list)))
             # predict
             output = self.worker.predict(current_batch_size, entry_metadata_list=input_entry_metadata_list)
         else:  # decode predict
             input_entry_metadata_list = entry_metadata_list
             index_list = None
-            logging.debug('decode len of input entry_metadata_list is {}'.format(len(input_entry_metadata_list)))
+            #logging.debug('decode len of input entry_metadata_list is {}'.format(len(input_entry_metadata_list)))
             output = self.worker.predict(current_batch_size, entry_metadata_list=input_entry_metadata_list)
 
         post_process_time = time.time()

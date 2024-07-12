@@ -421,7 +421,7 @@ class Linear(Cell):
     def __init__(self,
                  in_channels,
                  out_channels,
-                 weight_init='normal',
+                 weight_init='zeros',
                  bias_init='zeros',
                  has_bias=True,
                  activation=None,
