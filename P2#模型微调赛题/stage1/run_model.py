@@ -56,7 +56,7 @@ try:
     txt = txt.replace('\\n', '\n')
     inputs = tokenizer.encode(txt)
     print(f'>> input_ids({len(inputs)}): {inputs}')
-    outputs = model.generate(inputs, max_new_tokens=model_config.max_decode_length, do_sample=False)[0]
+    outputs = model.generate(inputs, max_new_tokens=model_config.max_decode_length, min_new_tokens=1, do_sample=False)[0]
     print(f'>> output_ids({len(outputs)}): {outputs}')
     generated = tokenizer.decode(outputs)
     print(f'>> generated({len(generated)}): {generated}')
