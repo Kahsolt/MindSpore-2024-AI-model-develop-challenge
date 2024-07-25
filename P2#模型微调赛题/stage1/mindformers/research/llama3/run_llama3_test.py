@@ -186,7 +186,7 @@ if __name__ == "__main__":
                         help='set task type.')
     parser.add_argument('--config', default='llama3/run_llama3_8b.yaml', type=str,
                         help='set task type.')
-    parser.add_argument('--run_mode', default='train', type=str,
+    parser.add_argument('--run_mode', default='predict', type=str,
                         help='set run mode for model.')
     parser.add_argument('--seq_length', default=None, type=int,
                         help='seq_length')

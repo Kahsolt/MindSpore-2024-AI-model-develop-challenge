@@ -39,6 +39,8 @@ PROMPT_TEMPLATE = {
   ]
 }
 
+QA = Tuple[str, str]
+
 PROBLEM_TEMPLATES = [{
   # 359347 cases
   'id': 0,
@@ -80,7 +82,7 @@ PROBLEM_TEMPLATES = [{
   'id': 6,
   'note': '乘法+幂运算，有效数字 inf',
   'Q': Regex('当 x = (-?[\d\.]+) 时，求函数 y = (-?\d+)x\^(\d+) 的值'),
-  'A': Regex('函数的值为：([\d\.]+)'),
+  'A': Regex('函数的值为：([\d\.E\+\-]+)'),
 }, {
   # 8665 cases
   'id': 7,
@@ -109,7 +111,7 @@ PROBLEM_TEMPLATES = [{
 
 
 # 仅返回中文数据 (已去重)
-def load_dataset_raw() -> List[Tuple[str, str]]:
+def load_dataset_raw() -> List[QA]:
   with open(DATASET_RAW_FILE, 'r', encoding='utf-8') as fh:
     cases = fh.read().strip().split('\n')
     dataset_raw = [json.loads(case) for case in cases]
@@ -135,7 +137,7 @@ def load_dataset_processed() -> Dict[str, Any]:
   return dataset_proc_ch
 
 
-def load_testset() -> List[Tuple[str, str]]:
+def load_testset() -> List[QA]:
   with open(DATASET_TEST_FILE, 'r', encoding='utf-8') as fh:
     cases = fh.read().strip().split('\n')
   samples = [json.loads(case) for case in cases]

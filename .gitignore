@@ -13,3 +13,6 @@ out/
 # logs
 log/
 *.log
+
+# tmp
+tmp/

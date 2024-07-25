@@ -16,8 +16,10 @@ trainer:
 
 # runner config
 runner_config:
-  epochs: 1
+  epochs: 6
   batch_size: 16
+  #epochs: 3
+  #batch_size: 12
   sink_mode: True
   sink_size: 2
 
@@ -107,7 +109,7 @@ recompute_config:
   recompute: False
   select_recompute: False
   parallel_optimizer_comm_recompute: False
-  mp_comm_recompute: True
+  mp_comm_recompute: False
   recompute_slice_activation: False
 
 # callbacks
@@ -115,7 +117,9 @@ callbacks:
   - type: MFLossMonitor
   - type: CheckpointMointor
     prefix: "llama3_8b"
-    save_checkpoint_steps: 3000     # TODO: 根据数据集情况调整 = len(dataset)*epoch/bs/5
+    save_checkpoint_steps: 375      # TODO: 根据数据集情况调整 = len(dataset)*epoch/bs/5 = 5000*5/16/5 = 375
+    #save_checkpoint_steps: 1250      # TODO: 根据数据集情况调整 = len(dataset)*epoch/bs/5 = 20000*5/16/5 = 1250
+    #save_checkpoint_steps: 2500     # TODO: 根据数据集情况调整 = len(dataset)*epoch/bs/5 = 50000*3/12/5 = 2500
     integrated_save: False
     async_save: False
   - type: ObsMonitor
@@ -124,11 +128,11 @@ callbacks:
 context:
   mode: 0 #0--Graph Mode; 1--Pynative Mode
   device_target: "Ascend"
-  enable_graph_kernel: False
+  enable_graph_kernel: True
   graph_kernel_flags: "--disable_expand_ops=Softmax,Dropout --enable_parallel_fusion=true --reduce_fuse_depth=8 --enable_auto_tensor_inplace=true"
   max_call_depth: 10000
   max_device_memory: "26GB"
-  save_graphs: False
+  save_graphs: True
   save_graphs_path: "./graph"
   device_id: 0
   runtime_num_threads: 1
@@ -137,7 +141,7 @@ context:
 model:
   model_config:
     type: LlamaConfig
-    batch_size: 16 # add for increase predict
+    batch_size: 1 # add for increase predict
     seq_length: 256
     hidden_size: 4096
     num_layers: 32
@@ -164,7 +168,7 @@ model:
     fine_grain_interleave: 1
     checkpoint_name_or_path: ""
     repetition_penalty: 1
-    max_decode_length: 256
+    max_decode_length: 128
     min_new_tokens: 1
     top_k: 3
     top_p: 1

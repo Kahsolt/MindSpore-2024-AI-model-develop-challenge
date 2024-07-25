@@ -2,20 +2,13 @@
 
 ## ↓↓↓ 数据准备
 
-# data source
-export TRAIN_DATA_DB=train-unipick17145.mindrecord
-export TRAIN_DATA_IN_JSON=data_uniform_pick_17145.json
-export TRAIN_DATA_OUT_JSON=data_uniform_pick_17145.out.json
-
-export TRAIN_DATA_DB=train-arith15000.mindrecord
-export TRAIN_DATA_IN_JSON=data_arith_15000.json
-export TRAIN_DATA_OUT_JSON=data_arith_15000.out.json
-
 # make train data db
 cd /home/ma-user/work/
-python data_converter.py \
-  --data_path /home/ma-user/work/$TRAIN_DATA_IN_JSON \
-  --output_path /home/ma-user/work/$TRAIN_DATA_OUT_JSON
+python make_dataset.py --split train --maker easy
+
+# data source
+export TRAIN_DATA_DB=train-easy5000.mindrecord
+export TRAIN_DATA_OUT_JSON=data_easy_5000.json
 
 cd /home/ma-user/work/mindformers/research/llama3
 python llama_preprocess.py \
@@ -39,8 +32,6 @@ cd /home/ma-user/work/mindformers/research/
 python llama3/run_llama3.py \
   --config llama3/run_llama3_8b_8k_800T_A2_64G_lora_dis_256_single.yaml \
   --load_checkpoint /home/ma-user/work/llama3-8B.ckpt \
-  --auto_trans_ckpt False \
-  --run_mode finetune \
   --train_data /home/ma-user/work/$TRAIN_DATA_DB
 
 # see param_cnt
