@@ -1,6 +1,8 @@
+# 微调任务预测
+
 seed: 0
 output_dir: './output' # path to save checkpoint/strategy
-load_checkpoint: '/home/ma-user/work/new_llama3_8b_lora.ckpt'
+load_checkpoint: ''
 src_strategy_path_or_dir: ''
 auto_trans_ckpt: False  # If true, auto transform load_checkpoint to load in distributed model
 only_save_strategy: False
@@ -19,21 +21,6 @@ runner_config:
   sink_mode: True
   sink_size: 2
 
-# optimizer
-optimizer:
-  type: FP32StateAdamWeightDecay
-  beta1: 0.9
-  beta2: 0.95
-  eps: 1.e-8
-
-# lr sechdule
-lr_schedule:
-  type: CosineWithWarmUpLR
-  learning_rate: 1.e-5
-  lr_end: 0.0
-  warmup_ratio: 0.03
-  total_steps: -1 # -1 means it will load the total steps of the dataset
-
 # dataset
 train_dataset: &train_dataset
   data_loader:
@@ -41,7 +28,7 @@ train_dataset: &train_dataset
     dataset_dir: ""
     shuffle: True
   input_columns: ["input_ids", "labels"]  # "input_ids", "labels" , labels are used in instruction finetune.
-  num_parallel_workers: 8
+  num_parallel_workers: 1
   python_multiprocessing: False
   drop_remainder: True
   batch_size: 1
@@ -62,7 +49,7 @@ eval_dataset: &eval_dataset
     dataset_dir: ""
     shuffle: False
   input_columns: ["input_ids"]
-  num_parallel_workers: 8
+  num_parallel_workers: 1
   python_multiprocessing: False
   drop_remainder: False
   repeat: 1
@@ -135,7 +122,7 @@ model:
   model_config:
     type: LlamaConfig
     batch_size: 1 # add for increase predict
-    seq_length: 8192
+    seq_length: 256
     hidden_size: 4096
     num_layers: 32
     num_heads: 32
@@ -160,9 +147,9 @@ model:
     block_size: 64
     offset: 0
     fine_grain_interleave: 1
-    checkpoint_name_or_path: "/home/ma-user/work/ms_ckpt/llama3-8B.ckpt"
+    checkpoint_name_or_path: ""
     repetition_penalty: 1
-    max_decode_length: 512
+    max_decode_length: 128
     max_new_tokens: 128
     top_k: 3
     top_p: 1
@@ -182,7 +169,7 @@ processor:
   return_tensors: ms
   tokenizer:
     model_max_length: 8192
-    vocab_file: "/path/tokenizer.model"
+    vocab_file: "/home/ma-user/work/tokenizer.model"
     pad_token: "<|reserved_special_token_0|>"
     type: Llama3Tokenizer
   type: LlamaProcessor

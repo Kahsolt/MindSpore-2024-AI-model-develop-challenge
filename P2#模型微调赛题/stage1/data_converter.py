@@ -30,6 +30,9 @@ PROMPT_DICT = {
         "### Instruction:\n{problem}\n\n### Response:"
     ),
 
+    "prompt_no_input": (
+        "{problem}\n"
+    ),
 }
 
 

@@ -52,16 +52,17 @@
 - mindformers\research\llama3
 ```
 
-### 我们要做的事
-
-⚠ 这个项目的绝大部分实验都是在云平台 Ascend 上训练模型，本地能做的主要是**结果分析、统计分析、画图表**等等  
-⚠ 仓库中这个嵌入的 mindformers 包是**经过高度删减**的，跑不起来模型，请不要手贱去下载模型权重！！因为跑不起来！！  
-ℹ 虽然没有模型权重，但分词器权重放在了 mindformers\checkpoint_download\llama\tokenizer.model，可以玩一下  
-
 # LoRA Notes
 
 - Attn 是低秩序的，可用 LoRA；FFW 是高秩的，不太能 LoRA
 - LoRA+: 记 ΔW = A*B，则矩阵 B (out) 的学习率要比矩阵 A (in) 大，比如 2^4 倍
+
+
+#### references
+
+- 使用LoRA（低秩自适应）微调LLM的实用技巧: http://lonepatient.top/2023/11/30/practical-tips-for-finetuning-llms
+- 一文读懂 Llama2 提示词结构与编写指南: https://www.53ai.com/news/qianyanjishu/786.html
+- 如何训练LLaMA2: https://blog.csdn.net/qq_27149279/article/details/131981984
 
 ----
 by Armit
