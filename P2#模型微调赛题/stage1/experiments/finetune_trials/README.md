@@ -58,3 +58,19 @@ correct rate: 0.00% (0)
 bingo_cnt:
 {0: [0, 137], 1: [0, 17], 2: [0, 12], 4: [0, 7], 5: [0, 13], 6: [0, 3], 7: [0, 4], 8: [0, 1], 9: [0, 5], 10: [0, 1]}
 ```
+
+⚪ run-2
+
+```
+prompt: Below is an instruction that describes a grade school math problem. Write a response that gives the correct answer.\n\n### Instruction:\n{problem}\n\n### Response:
+output reprocess: CoT
+data: easy_5000
+epoch: 1
+bs: 4
+lr: 3e-5
+target_modules: .*wq|.*wv
+n_param: 3407872
+
+F1 score: 70.45845460279635
+Em score: 54.66860183841316
+```
