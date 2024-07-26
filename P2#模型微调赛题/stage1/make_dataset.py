@@ -83,9 +83,13 @@ def make_CoT(samples:QA) -> QA:
         a = a[1:]
         b = b[1:]
         ans_CoT = f'{left} = {a} {op} {b} = {right}'
-      elif op == '-' and b_sign:
+      elif op == '-' and b_sign:    # 减负数
         b = b[1:]
         op = '+'
+        ans_CoT = f'{left} = {a} {op} {b} = {right}'
+      elif op == '+' and b_sign:    # 加负数
+        b = b[1:]
+        op = '-'
         ans_CoT = f'{left} = {a} {op} {b} = {right}'
       else:
         ans_CoT = f'{left} = {right}'
@@ -93,13 +97,13 @@ def make_CoT(samples:QA) -> QA:
     elif tid == 1:
       # 计算 (-?[\d\.]+) 的 (\d+) 次方？
       base, index, result = tmpl['A'].findall(ans)[0]
-      result = round_s(result)
+      result = round_s(result, 0)
       ans_CoT = f'{base}^{index} = {result}'
 
     elif tid == 2:
       # 计算 ([\d\.]+) 的平方根？
       a, b = tmpl['A'].findall(ans)[0]
-      b = round_s(b)
+      b = round_s(b, 1)
       ans_CoT = f'√{a} = {b}'
 
     elif tid == 3:
@@ -122,12 +126,7 @@ def make_CoT(samples:QA) -> QA:
       k, b = tmpl['Q'].findall(prb)[0]
       v = round_s(tmpl['A'].findall(ans)[0])
       b_neg = neg_s(b)
-      CoT = [
-        f'{k}x = {b_neg}',
-        f'x = {b_neg} / {k}',
-        f'x = {v}',
-      ]
-      ans_CoT = '\n'.join(CoT) + f'\n方程的解为：{v}'
+      ans_CoT = f'方程为 {k}x = {b_neg}，因此 x = {b_neg} / {k}  = {v}。方程的解为：{v}'
 
     elif tid == 6:
       # 当 x = (-?[\d\.]+) 时，求函数 y = (-?\d+)x\^(\d+) 的值
@@ -244,7 +243,7 @@ def make_trainset_arith(N:int=15000):
   write_data_subset(subset, BASE_PATH / f'data_arith_{nlen}.json')
 
 
-def make_trainset_easy(N:int=5000):
+def make_trainset_easy(N:int=7500):
   # 忽略困难的题:
   # [tid=0] 算数乘法
   # [tid=1] 次方

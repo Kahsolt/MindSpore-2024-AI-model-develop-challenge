@@ -2,6 +2,8 @@
 # Author: Armit
 # Create Time: 2024/07/05 
 
+# FUCK: 加了 prompt 和 CoT 之后自动判题有点困难了...
+
 from re import Pattern
 from argparse import ArgumentParser
 import numpy as np
@@ -16,13 +18,8 @@ def get_problem_template(problem:str, solution:str) -> Tuple[int, Tuple[Pattern,
   for idx, tmpl in enumerate(PROBLEM_TEMPLATES):
     if tmpl['Q'].match(problem) and tmpl['A'].match(solution):
       return idx, tmpl
+  breakpoint()
   raise ValueError('unknown problem template')
-
-
-def check_match(problem:str, solution:str, predict:str) -> Tuple[int, bool]:
-  tid, tmpl = get_problem_template(problem, solution)
-  ok = predict == solution
-  return tid, ok
 
 
 def check_correct(problem:str, solution:str, predict:str) -> Tuple[int, bool]:
@@ -60,12 +57,11 @@ def check_correct(problem:str, solution:str, predict:str) -> Tuple[int, bool]:
   return tid, ok
 
 
-def get_acc(problems:List[str], solutions:List[str], predicts:List[str], strict:bool=True) -> Tuple[float, Dict[int, Tuple[int, int]]]:
-  checker = check_match if strict else check_correct
+def get_acc(problems:List[str], solutions:List[str], predicts:List[str]) -> Tuple[float, Dict[int, Tuple[int, int]]]:
   ok, total = 0, 0
   bingo_cnt = {}
   for problem, solution, predict in zip(problems, solutions, predicts):
-    tid, bingo = checker(problem, solution, predict)
+    tid, bingo = check_correct(problem, solution, predict)
     if tid not in bingo_cnt: 
       bingo_cnt[tid] = [0, 0]
     bingo_cnt[tid][0] += bingo
@@ -73,6 +69,36 @@ def get_acc(problems:List[str], solutions:List[str], predicts:List[str], strict:
     ok += bingo
     total += 1
   return (ok / total), bingo_cnt
+
+
+def run(args):
+  pairs = load_testset()
+  problems  = [p for p, a in pairs]
+  solutions = [a for p, a in pairs]
+  predict_list = np.load(args.R, allow_pickle=True)
+  predicts = [it['text_generation_text'][0].strip() for it in predict_list]
+
+  mcr, bingo_cnt = get_acc(problems, solutions, predicts)
+
+  N = len(predicts)
+  print('samples_count:', N)
+  print(f'correct rate: {mcr:.2%} ({round(N * mcr)})')
+  print('bingo_cnt:')
+  print({k: bingo_cnt[k] for k in sorted(bingo_cnt)})
+
+
+def run_show(args):
+  pairs = load_testset()
+  problems  = [p for p, a in pairs]
+  solutions = [a for p, a in pairs]
+  predict_list = np.load(args.R, allow_pickle=True)
+  predicts = [it['text_generation_text'][0].strip() for it in predict_list]
+
+  for prb, ans, slt in zip(problems, solutions, predicts):
+    print('prb:', prb[134:-15])
+    print('ans:', ans)
+    print('slt:', slt[len(prb)+1:])
+    print()
 
 
 def _unittest_():
@@ -94,36 +120,14 @@ def _unittest_():
     '平均值为 60.666666666666666',
     '40.96000',
   ]
-  assert isclose(get_acc(problems, solutions, predicts, strict=True )[0], 1/4)
-  assert isclose(get_acc(problems, solutions, predicts, strict=False)[0], 3/4)
-
-
-def run(args):
-  pairs = load_testset()
-  problems  = [p for p, a in pairs]
-  solutions = [a for p, a in pairs]
-  predict_list = np.load(args.R, allow_pickle=True)
-  predicts = [it['text_generation_text'][0].strip() for it in predict_list]
-
-  # literal match rate
-  lmr, bingo_cnt = get_acc(problems, solutions, predicts, strict=True)
-  # math correct rate
-  mcr, bingo_cnt = get_acc(problems, solutions, predicts, strict=False)
-
-  N = len(predicts)
-  print('samples_count:', N)
-  print(f'  match rate: {lmr:.2%} ({round(N * lmr)})')
-  print(f'  correct rate: {mcr:.2%} ({round(N * mcr)})')
-  print('bingo_cnt:')
-  print({k: bingo_cnt[k] for k in sorted(bingo_cnt)})
+  assert isclose(get_acc(problems, solutions, predicts)[0], 3/4)
 
 
 if __name__ == '__main__':
-  # _unittest_()
-
   parser = ArgumentParser()
   parser.add_argument('-I', default=DATASET_TEST_FILE, type=Path, help='predict dataset')
   parser.add_argument('-R', default=(BASE_PATH / 'experiments' / 'test_eval_base_math' / 'result_npy.npy'), type=Path, help='predict result.npy file')
   args = parser.parse_args()
 
-  run(args)
+  #run(args)
+  run_show(args)

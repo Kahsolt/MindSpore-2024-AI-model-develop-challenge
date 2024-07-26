@@ -7,8 +7,8 @@ cd /home/ma-user/work/
 python make_dataset.py --split train --maker easy
 
 # data source
-export TRAIN_DATA_DB=train-easy5000.mindrecord
-export TRAIN_DATA_OUT_JSON=data_easy_5000.json
+export TRAIN_DATA_DB=train-easy7500.mindrecord
+export TRAIN_DATA_OUT_JSON=data_easy_7500.json
 
 cd /home/ma-user/work/mindformers/research/llama3
 python llama_preprocess.py \
