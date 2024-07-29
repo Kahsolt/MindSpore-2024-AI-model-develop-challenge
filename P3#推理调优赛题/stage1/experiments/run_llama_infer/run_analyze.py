@@ -12,8 +12,8 @@ input_lens = [it['inputs_len'] for it in data]
 output_lens = [it['outputs_len'] - it['inputs_len'] + 1 for it in data]
 time = [it['time'] for it in data]
 
-print('max(output_lens):', max(output_lens))
-print('sum(time):', sum(time))
+print('max(output_lens):', max(output_lens))  # 505
+print('sum(time):', sum(time))  # 2395.26s = 39.92min
 
 plt.figure(figsize=(8, 3))
 plt.subplot(131) ; plt.title('len(Input) - Time')        ; plt.scatter(input_lens,  time,        s=5)

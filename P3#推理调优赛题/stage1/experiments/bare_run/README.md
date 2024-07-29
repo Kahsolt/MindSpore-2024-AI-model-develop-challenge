@@ -61,3 +61,15 @@ python test_serving_performance.py --task 1 -X 1 -T 30
 | 5 | 25.9519 | -X 30 -T 1 | 22.7519 |
 | 5 | 15.6472 | -X 30 -T 1 | 12.5312 (数据不太稳定，不知道为何) |
 | 6 | 16.5957 | -X 30 -T 1 | 13.4657 |
+
+
+#### `WorkAgent.predict` 分析
+
+```
+npu_total_time = 40.42506217956543
+  - pre-process  time = 13.292789459228516
+  - kbk predict  time = 23.569345474243164
+  - post process time =  3.093719482421875
+
+
+```

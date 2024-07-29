@@ -10,7 +10,7 @@ model_config:
     # input
     model_type: 'dyn'       # seems conflict with `seq_type`!!
     seq_type: 'static'
-    seq_length: [4096]
+    seq_length: [512]
     # output
     max_generate_length: 4096
     # batching
@@ -23,7 +23,7 @@ model_config:
     page_attention: True
     # misc
     current_index: False                        # deprecated
-    backend: 'kbk'                              # 'ge'
+    backend: 'kbk'                              # 'ge', 'kbk'
     zactivate_len: [512, 1024, 2048, 4096]      # only for 'ge'
 
 serving_config:
@@ -35,7 +35,7 @@ serving_config:
 pa_config:      # page_attention
     num_blocks: 1024
     block_size: 16
-    decode_seq_length: 4096
+    decode_seq_length: 512
 
 tokenizer:
     type: LlamaTokenizer

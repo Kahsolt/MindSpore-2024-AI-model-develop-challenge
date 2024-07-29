@@ -4,6 +4,15 @@
 
 ----
 
+```
+时间开销比例 [service : model = 1 : 2]
+llm-serving time: 3513.11s = 58.55min
+mindformer  time: 2395.26s = 39.92min
+overhead:                    18.63min
+```
+
+----
+
 ### run_llama_infer 测试
 
 > 环境: 云端
