@@ -70,6 +70,4 @@ npu_total_time = 40.42506217956543
   - pre-process  time = 13.292789459228516
   - kbk predict  time = 23.569345474243164
   - post process time =  3.093719482421875
-
-
 ```

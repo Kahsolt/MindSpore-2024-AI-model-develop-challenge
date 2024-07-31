@@ -4,38 +4,64 @@
 
 ----
 
+### 云端实验
+
+- 基线复现: [baseline_reproduce](./baseline_reproduce/README.md)
+- 测试裸 mindformer: [run_llama_infer](./run_llama_infer/README.md)
+- 测试 llm-serving 套壳: [run_llm_serving](./run_llm_serving/README.md)
+- 测试 run_performance_serving: 套壳: [run_performance_serving](./run_performance_serving/README.md)
+
 ```
-时间开销比例 [service : model = 1 : 2]
-llm-serving time: 3513.11s = 58.55min
-mindformer  time: 2395.26s = 39.92min
-overhead:                    18.63min
+时间开销比例 [service / model = 1/2 ~ 3/5]
+[performance]  3513.11s = 58.55min (推算 35.81ms/token， 多线程测定总时间)
+[llm-serving] ~3996.02s = 66.60min (测定 40ms/token, 单线程推算总时间)
+[mindformers]  2395.26s = 39.92min (测定 25ms/token)
+ (overhead)              18.63min
 ```
 
-----
+⚠ 核心问题在于定位 15ms/token 的额外开销！
 
-### run_llama_infer 测试
+```
+[mindformers call-chain]
+-> GenerationMixin.generate                   // 循环推理，测定 25ms/token
+  -> GenerationMixin.infer                    // 推理一个token单位
+    -> GenerationMixin.forward (*)            // 推测 ~22.5ms
+      -> LlamaForCausalLM.construct           // if prefill
+      -> GenerationMixin._incremental_infer   // if decode
+        -> LlamaForCausalLM.construct
+    -> GenerationMixin.postprocess            // 推测 ~3ms
 
-> 环境: 云端
+[llm-serving call-chain]
+-> LLMServer.generate_answer                              // 推理一个请求单位
+  -> LLMServer.register_request
+    -> LLMServer.start_background_loop
+      -> LLMServer.run_loop
+        -> LLMServer.step
+          -> AsyncMaster.step_async                       // 决定 batching 策略
+            -> AsyncMaster._run_workers_async             // 测定 40ms/token
+              -> Worker.predict                           // 测定 39.55ms
+                - Worker._predict
+                  -> DisModel.call                        // 测定 39.47ms
+                    - shared_mem::write
+                    - tcp::sendall
+                      -> start_agent_socket_server        // 测定 63.4ms(prefill) / 37.7ms(decode)
+                        - tcp::recv
+                        - WorkAgent.predictc
+                          - shared_mem::read
+                          - agent pre-process             // 测定 12.0ms [这就是额外开销!!]
+                          - WorkAgent.predict_for_kbk     // 测定 22.5ms
+                            -> GenerationMixin.forward    // 流程同上 mindformers (*)
+                          - WorkAgent.do_post_sampling    // 测定 3.04ms
+                          - shared_mem::write
+                        - tcp::sendall
+                    - tcp::recv
+                    - shared_mem::read
+              - AsyncMaster._postprocess                  // 测定 0.83ms
+```
 
-参考 [run_llama_infer](./run_llama_infer/) 目录
 
+### 本地实验
 
-### 基线复现
-
-> 环境: 云端/本地
-
-参考 [baseline_reproduce](./baseline_reproduce/README.md) 目录
-
-
-### 裸跑测试 / 打桩测试
-
-> 环境: 本地/云端
-
-参考 [bare_run](./bare_run/README.md) 目录
-
-
-### lprof 测试
-
-> 环境: 本地
-
-参考 [lprof](./lprof/README.md) 目录
+- 数据集统计: [ds_stats](./ds_stats/README.md)
+- 裸跑测试 / 打桩测试: [bare_run](./bare_run/README.md)
+- lprof 测试: [lprof](./lprof/README.md)

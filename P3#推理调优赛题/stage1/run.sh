@@ -6,6 +6,10 @@
 cd /home/ma-user/work/llm-serving/
 python examples/start.py --task 1 --config /home/ma-user/work/llm-serving/configs/llama/llama_7b_kbk_pa_dyn.yaml
 
+python examples/start_agent.py --task 1 --config configs/llama/llama_7b_kbk_pa_dyn.yaml
+python examples/server_app_post.py --config configs/llama/llama_7b_kbk_pa_dyn.yaml
+
+
 # test llm-serving
 curl 127.0.0.1:8835/models/llama2/generate \
   -X POST \

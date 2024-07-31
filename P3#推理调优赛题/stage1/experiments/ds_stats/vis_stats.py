@@ -46,7 +46,6 @@ def analyze_data():
     return input_token_lengths, output_token_lengths
 
 input_token_lengths, output_token_lengths = analyze_data()
-breakpoint()
 
 # 定义绘制并保存直方图和折线图的函数
 def plot_hist_and_line(input_token_lengths, output_token_lengths):

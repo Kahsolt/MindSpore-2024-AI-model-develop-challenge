@@ -4,10 +4,10 @@
 
 ----
 
-推理时间与输出长度呈直接的线性关系 (~40 tokens/s)，输入和输出长度没啥线性关系。
+推理时间与输出长度呈直接的线性关系，输入和输出长度没啥线性关系。
 
 ```
-Generate speed: ~40 tokens/s
+Generate speed: ~40 tokens/s 即 0.025s / token
 AI core usage: 66%~70%
 Total runtime: 2457.07s = 40.95min | 2397.50477s = 39.95min
 

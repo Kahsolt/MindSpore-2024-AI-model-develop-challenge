@@ -818,7 +818,7 @@ class WorkAgent:
         else:
             res = self.mindspore_model(**model_inputs)
         logging.info('predict time is {}'.format((time.time() - predict_time) * 1000))
-        logging.info("mindspore_model res : %s;", res)
+        logging.debug("mindspore_model res : %s;", res)
         outputs = res[0] if isinstance(res, tuple) else res
         return outputs
 

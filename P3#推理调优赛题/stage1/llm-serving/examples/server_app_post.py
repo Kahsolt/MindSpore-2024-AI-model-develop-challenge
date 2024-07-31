@@ -20,6 +20,7 @@
 import os
 import json
 import uuid
+import time
 import logging
 import argparse
 from contextlib import asynccontextmanager
@@ -63,6 +64,7 @@ app = FastAPI(lifespan=lifespan)
 
 
 async def get_full_res(request, results):
+    ts = time.time()
     all_texts = ''
     tokens_list = []
     finish_reason = ""
@@ -98,9 +100,11 @@ async def get_full_res(request, results):
         "details": None
     }
     yield (json.dumps(ret, ensure_ascii=False) + '\n').encode("utf-8")
+    print('[get_full_res]', time.time() - ts)
 
 
 async def get_full_res_sse(request, results):
+    ts = time.time()
     all_texts = ''
     tokens_list = []
     finish_reason = ""
@@ -137,9 +141,11 @@ async def get_full_res_sse(request, results):
         "details": None
     }
     yield (json.dumps(ret, ensure_ascii=False) + '\n').encode("utf-8")
+    print('[get_full_res_sse]', time.time() - ts)
 
 
 async def get_stream_res(request, results):
+    ts = time.time()
     all_texts: List[str] = []
     tokens_list = []
     finish_reason: str = None
@@ -191,8 +197,11 @@ async def get_stream_res(request, results):
         }
         yield ("data:" + json.dumps(ret, ensure_ascii=False) + '\n').encode("utf-8")
 
+    print('[get_stream_res]', time.time() - ts)
+
 
 async def get_stream_res_sse(request, results): # <- step 3
+    ts = time.time()
     all_texts: list[str] = []
     tokens_list = []
     finish_reason: str = None
@@ -254,8 +263,11 @@ async def get_stream_res_sse(request, results): # <- step 3
         }
         yield (json.dumps(ret, ensure_ascii=False) + '\n').encode("utf-8")
 
+    print('[get_stream_res_sse]', time.time() - ts)
+
 
 def send_request(request: ClientRequest):       # <- step 2
+    ts = time.time()
     print('request: ', request)
 
     request_id = str(uuid.uuid1())
@@ -319,6 +331,7 @@ def send_request(request: ClientRequest):       # <- step 2
     print('generate_answer...')
     global llm_server
     results = llm_server.generate_answer(request_id, **params)
+    print('[send_request]', time.time() - ts)
     return results
 
 
