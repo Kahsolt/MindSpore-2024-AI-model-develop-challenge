@@ -23,7 +23,7 @@ class WorkAgent(WorkAgentBase):
 
         # 调用mindformers进行推理 
         if self.mindspore_model.config.use_past:
-            logging.debug(f"predict before pa predict_for_kbk.")
+            #logging.debug(f"predict before pa predict_for_kbk.")
             if self.is_prefill:
                 self.mindspore_model.is_first_iteration = True
             res, current_index = self.mindspore_model.forward(
@@ -34,12 +34,12 @@ class WorkAgent(WorkAgentBase):
                 slot_mapping=slot_mapping,
                 prefill=self.is_prefill,
                 **model_kwargs)
-            logging.info("use_past true mindspore_model res : %s;", res)
-            logging.info("use_past true mindspore_model current_index : %s;", current_index)
+            #logging.info("use_past true mindspore_model res : %s;", res)
+            #logging.info("use_past true mindspore_model current_index : %s;", current_index)
         else:
             res = self.mindspore_model(**model_inputs)
         logging.info('predict time is {}'.format((time.time() - predict_time) * 1000))
-        logging.info("mindspore_model res : %s;", res)
+        #logging.info("mindspore_model res : %s;", res)
         outputs = res[0] if isinstance(res, tuple) else res
 
         # 222222222222222222222222222222222222222222222222222222222
@@ -67,7 +67,7 @@ class WorkAgent(WorkAgentBase):
 
 
 def start_agent_socket_server(i, cfg: ServingConfig, startup_queue):
-    logging.basicConfig(level=logging.DEBUG,
+    logging.basicConfig(level=logging.INFO,
                         filename=f"./output/agent_{i}.log",
                         filemode='w',
                         format=

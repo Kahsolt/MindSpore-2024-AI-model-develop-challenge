@@ -428,7 +428,7 @@ class DisModel:
 
         """kvcache infer"""
         time_start = time.time()
-        logging.debug("is prefill {}".format(is_first_iteration))
+        #logging.debug("is prefill {}".format(is_first_iteration))
         decode_index_list = kwargs.get("decode_index_list")
 
         # 加入pa
@@ -456,10 +456,10 @@ class DisModel:
             second_group = []
             for i in range(4, len(lite_inputs)):
                 second_group.append(lite_inputs[i])
-            logging.debug("second_group {}".format(second_group))
+            #logging.debug("second_group {}".format(second_group))
             if len(second_group) != 0:
                 for j in range(len(second_group)):
-                    logging.debug("second_group index {}".format(j))
+                    #logging.debug("second_group index {}".format(j))
                     item = np.ndarray(second_group[j].shape, dtype=second_group[j].dtype, buffer=shms[1 + j].buf)
                     item[:] = second_group[j][:]
                     shape_list.append(second_group[j].shape)
@@ -472,16 +472,12 @@ class DisModel:
             gen_params[:] = params_np[:]
 
             shape_list.append(params_np.shape)
-
-            shape_strs = []
-            for shape in shape_list:
-                shape_str = " ".join(str(element) for element in shape)
-                shape_strs.append(shape_str)
-            shapes_str = "*" + ",".join(element for element in shape_strs)
+            shape_strs = [" ".join(str(element) for element in shape) for shape in shape_list]
+            shapes_str = "*" + ",".join(shape_strs)
         else:
-            logging.debug("valid_batch_flag in decode is {}".format(valid_batch_flag))
+            #logging.debug("valid_batch_flag in decode is {}".format(valid_batch_flag))
             batch_flag_str = " ".join(str(element) for element in valid_batch_flag)
-            shapes_str = "a" + '_' + str(current_batch_size) + '_' + batch_flag_str
+            shapes_str = f"a_{str(current_batch_size)}_{batch_flag_str}"
 
         # 加入pa
         if self.config.model_config.page_attention:
@@ -494,16 +490,11 @@ class DisModel:
             slot_mapping_shm = np.ndarray(slot_mapping_np.shape, dtype=slot_mapping_np.dtype, buffer=shms[8].buf)
             slot_mapping_shm[:] = slot_mapping_np[:]
 
-            shape_strs = []
-            for shape in [block_tables_np.shape, slot_mapping_np.shape]:
-                shape_str = " ".join(str(element) for element in shape)
-                shape_strs.append(shape_str)
-            if is_first_iteration:
-                shapes_str += "," + ",".join(element for element in shape_strs)
-            else:
-                shapes_str += "_" + "_".join(element for element in shape_strs)
-        logging.debug("get input lite is {} ".format((time.time() - time_start) * 1000))
-        logging.debug("server decode batch size is {} ".format(current_batch_size))
+            sep = "," if is_first_iteration else "_"
+            shape_strs = [sep + " ".join(str(element) for element in shape) for shape in [block_tables_np.shape, slot_mapping_np.shape]]
+            shapes_str += ''.join(shape_strs)
+        #logging.debug("get input lite is {} ".format((time.time() - time_start) * 1000))
+        #logging.debug("server decode batch size is {} ".format(current_batch_size))
         shapes_str = shapes_str.encode()
 
         for item in self.agent_stubs:
@@ -517,15 +508,15 @@ class DisModel:
         if recv_data == "2":    # RuntimeError
             for _ in decode_index_list:
                 # result.append(int(Baseconfig.end_token))
-                result.append((int(-1),0))
+                result.append((-1, 0))
             print("--------------------predict failed, abandon current prompt, please try again----------------")
             logging.error("predict failed, abandon current prompt, please try again")
             return result, 1
-        for decode_index in decode_index_list:  # FIXME: 这一段看求不懂啊
+        for decode_index in decode_index_list:
             tmp = np.ndarray((decode_index + 1,), dtype=np.int32, buffer=shms[5].buf)
             tmp_logprob = np.ndarray((decode_index + 1,), dtype=np.float64, buffer=shms[6].buf)
             result.append((int(tmp[decode_index:decode_index + 1]), float(tmp_logprob[decode_index:decode_index + 1])))
 
-        logging.info("--------------------callV3 result value is {} ".format(result))
+        #logging.info("callV3 result value is {} ".format(result))
         logging.info("model.call time is {} ".format((time.time() - time_start) * 1000))
         return result, 1

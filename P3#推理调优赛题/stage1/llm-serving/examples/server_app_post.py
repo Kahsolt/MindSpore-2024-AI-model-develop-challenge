@@ -64,7 +64,7 @@ app = FastAPI(lifespan=lifespan)
 
 
 async def get_full_res(request, results):
-    ts = time.time()
+    #ts = time.time()
     all_texts = ''
     tokens_list = []
     finish_reason = ""
@@ -100,11 +100,11 @@ async def get_full_res(request, results):
         "details": None
     }
     yield (json.dumps(ret, ensure_ascii=False) + '\n').encode("utf-8")
-    print('[get_full_res]', time.time() - ts)
+    #print('[get_full_res]', time.time() - ts)
 
 
 async def get_full_res_sse(request, results):
-    ts = time.time()
+    #ts = time.time()
     all_texts = ''
     tokens_list = []
     finish_reason = ""
@@ -141,11 +141,12 @@ async def get_full_res_sse(request, results):
         "details": None
     }
     yield (json.dumps(ret, ensure_ascii=False) + '\n').encode("utf-8")
-    print('[get_full_res_sse]', time.time() - ts)
+    #print('[get_full_res_sse]', time.time() - ts)
 
 
 async def get_stream_res(request, results):
-    ts = time.time()
+    #ts = time.time()
+
     all_texts: List[str] = []
     tokens_list = []
     finish_reason: str = None
@@ -178,7 +179,7 @@ async def get_stream_res(request, results):
                     res_list
                 ],
             }
-            logging.debug("get_stream_res one token_index is {}".format(token_index))
+            #logging.debug("get_stream_res one token_index is {}".format(token_index))
             yield ("data:" + json.dumps(ret, ensure_ascii=False) + '\n').encode("utf-8")
 
     return_full_text = request.parameters.return_full_text
@@ -197,11 +198,12 @@ async def get_stream_res(request, results):
         }
         yield ("data:" + json.dumps(ret, ensure_ascii=False) + '\n').encode("utf-8")
 
-    print('[get_stream_res]', time.time() - ts)
+    #print('[get_stream_res]', time.time() - ts)
 
 
 async def get_stream_res_sse(request, results): # <- step 3
-    ts = time.time()
+    #ts = time.time()
+
     all_texts: list[str] = []
     tokens_list = []
     finish_reason: str = None
@@ -239,7 +241,7 @@ async def get_stream_res_sse(request, results): # <- step 3
                 "retry": 30000,
                 "data": tmp_ret
             }
-            logging.debug("get_stream_res one token_index is {}".format(token_index))
+            #logging.debug("get_stream_res one token_index is {}".format(token_index))
             yield (json.dumps(ret, ensure_ascii=False) + '\n').encode("utf-8")
 
     return_full_text = request.parameters.return_full_text
@@ -263,13 +265,11 @@ async def get_stream_res_sse(request, results): # <- step 3
         }
         yield (json.dumps(ret, ensure_ascii=False) + '\n').encode("utf-8")
 
-    print('[get_stream_res_sse]', time.time() - ts)
+    #print('[get_stream_res_sse]', time.time() - ts)
 
 
 def send_request(request: ClientRequest):       # <- step 2
-    ts = time.time()
-    print('request: ', request)
-
+    #ts = time.time()
     request_id = str(uuid.uuid1())
 
     if request.parameters is None:
@@ -327,11 +327,10 @@ def send_request(request: ClientRequest):       # <- step 2
         "max_token_len": request.parameters.max_new_tokens,
     }
 
-    print('params: ', params)
-    print('generate_answer...')
+    #print('generate_answer params: ', params)
     global llm_server
     results = llm_server.generate_answer(request_id, **params)
-    print('[send_request]', time.time() - ts)
+    #print('[send_request]', time.time() - ts)
     return results
 
 
@@ -358,7 +357,7 @@ async def async_generator(request: ClientRequest):
 @app.post("/models/llama2/generate")
 async def async_full_generator(request: ClientRequest):
     results = send_request(request)
-    print('get_full_res...')
+    #print('get_full_res...')
     return StreamingResponse(get_full_res(request, results))
 
 
@@ -376,7 +375,7 @@ async def async_stream_generator(request: ClientRequest):
 
     results = send_request(request)
     if request.parameters.return_protocol == "sse":
-        print('get_stream_res_sse...')
+        #print('get_stream_res_sse...')
         return EventSourceResponse(
             get_stream_res_sse(request, results),
             media_type="text/event-stream",
@@ -384,7 +383,7 @@ async def async_stream_generator(request: ClientRequest):
             ping=600
         )
     else:
-        print('get_stream_res...')
+        p#rint('get_stream_res...')
         return StreamingResponse(get_stream_res(request, results))
 
 
@@ -422,8 +421,7 @@ async def _get_serverd_model_info():
         "model_pipeline_tag": "text-generation",
         "version": "2.3"
     }
-
-    print(ret)
+    #print(ret)
     yield json.dumps(ret, ensure_ascii=False)
 
 

@@ -241,11 +241,6 @@ class DecodeParams:
         self.ge_token = ge_token
 
 
-"""
-work_agent.proto实现, 供worker调用
-"""
-
-
 class WorkAgent:
     def __init__(self, rank_id, cfg: ServingConfig):
         self.rank_id = rank_id
@@ -466,7 +461,8 @@ class WorkAgent:
 
     def do_post_sampling(self, outputs_np:Tensor, outputs_shm, output_logprob_shm, decode_index, prefill=True):
         # logits to (sampled) token_id
-        logging.info("do_post_sampling outputs_np type is {}, value is {}".format(outputs_np.dtype, outputs_np))
+        #ts_psampe = time.time()
+        #logging.info("do_post_sampling outputs_np type is {}, value is {}".format(outputs_np.dtype, outputs_np))
         do_sample = self.get_consistent_batch(decode_index)
         if self.config.model_config.backend == "ge":
             if self.config.serving_config.enable_host_post_sampling:
@@ -491,10 +487,12 @@ class WorkAgent:
             if isinstance(target, Tensor):
                 target = target.asnumpy()
             output_info = outputs_np.asnumpy()
+        #logging.info('ts_psampe is {}'.format((time.time() - ts_psampe)))
 
         # Write to shared_mem
-        logging.info("do_post_sampling target type is {}, value is {}".format(target.dtype, target))
-        logging.info("do_post_sampling output_info type is {}, value is {}".format(output_info.dtype, output_info))
+        #ts_memw = time.time()
+        #logging.info("do_post_sampling target type is {}, value is {}".format(target.dtype, target))
+        #logging.info("do_post_sampling output_info type is {}, value is {}".format(output_info.dtype, output_info))
         if self.rank_id == 0:
             if prefill:
                 for index in decode_index:
@@ -520,6 +518,7 @@ class WorkAgent:
                 tmp_logprob = np.ndarray((self.current_batch_size,), dtype=np.float64, buffer=output_logprob_shm.buf)
                 tmp_logprob[:] = logprob_list[:]
                 self.targets[:] = target[:]
+        #logging.info('ts_memw is {}'.format((time.time() - ts_memw)))
 
     def model_choice_seq(self, act_len, decode_model_map):
         if len(decode_model_map) == 1:
@@ -528,7 +527,7 @@ class WorkAgent:
         if len(act_len_list) != len(decode_model_map):
             logging.error('act_len config is inconsistent with decode model ini, please check them')
         model_index = act_len_list.index(act_len)
-        logging.debug('current act_len model is: {}'.format(act_len))
+        #logging.debug('current act_len model is: {}'.format(act_len))
         return decode_model_map[model_index]
 
     def predict(self, shape_list=None, current_batch=None, batch_valid_flag=None):
@@ -572,8 +571,8 @@ class WorkAgent:
             decode_index_list = gen_params[:, 5].astype(np.int32)
             # 添加baichuanPA block_tables_shape slot_mapping_shape
             if self.config.model_config.page_attention:
-                logging.debug("prefill before page aatention get shape list")
-                print("model_name:", self.config.model_config.model_name)
+                #logging.debug("prefill before page aatention get shape list")
+                #print("model_name:", self.config.model_config.model_name)
                 block_tables_shape = shape_list[2]  # 这里的shapeindex会不会变？？
                 slot_mapping_shape = shape_list[3]
 
@@ -695,12 +694,12 @@ class WorkAgent:
             slot_mapping_shm = shared_memory.SharedMemory(name=self.shm_names[8])
             block_tables_np = np.ndarray((block_tables_shape), dtype=np.int32, buffer=block_tables_shm.buf)
             slot_mapping_np = np.ndarray((slot_mapping_shape), dtype=np.int32, buffer=slot_mapping_shm.buf)
-            logging.debug(f"===before predict block_tables shape is {block_tables_np.shape}, dtype is {block_tables_np.dtype}, value is {block_tables_np}")
-            logging.debug(f"===before predict slot_mapping shape is {slot_mapping_np.shape}, dtype is {slot_mapping_np.dtype}, value is {slot_mapping_np}")
+            #logging.debug(f"===before predict block_tables shape is {block_tables_np.shape}, dtype is {block_tables_np.dtype}, value is {block_tables_np}")
+            #logging.debug(f"===before predict slot_mapping shape is {slot_mapping_np.shape}, dtype is {slot_mapping_np.dtype}, value is {slot_mapping_np}")
 
         if self.config.model_config.backend == "ge":
             if self.config.model_config.page_attention:
-                logging.debug("page attention beofore predict")
+                #logging.debug("page attention beofore predict")
                 if self.is_prefill:
                     tmp_in = [input_ids, valid_length, slot_mapping_np]
                 else:
@@ -712,9 +711,9 @@ class WorkAgent:
                 if len(extra_input) > 0:
                     tmp_in.extend(extra_input)
 
-            for tmp in tmp_in:
-                logging.debug("item shape is {}, dtype is {}".format(tmp.shape, tmp.dtype))
-                logging.debug("item is {}".format(tmp))
+            #for tmp in tmp_in:
+            #    logging.debug("item shape is {}, dtype is {}".format(tmp.shape, tmp.dtype))
+            #    logging.debug("item is {}".format(tmp))
 
             outputs = self.predict_for_ge(extra_input, start_time, tmp_in)
         else:   # "kbk"
@@ -722,50 +721,52 @@ class WorkAgent:
             # init kbk_targets, shape(current_batch, seq_length), default value: self.config.model_config.pad_token_id
             if self.kbk_targets is None:
                 decode_batch_size = self.config.model_config.decode_batch_size[0]
-                logging.debug(f"predict decode_batch_size value is {decode_batch_size}, seq_length value is {seq_length}")
+                #logging.debug(f"predict decode_batch_size value is {decode_batch_size}, seq_length value is {seq_length}")
                 self.kbk_targets = np.full((decode_batch_size, seq_length), self.config.model_config.pad_token_id)
 
-            logging.debug(f"predict self.kbk_targets value is {self.kbk_targets}, shape is {self.kbk_targets.shape}, dtype is {self.kbk_targets.dtype}")
-
             # decode [[4]]
-            logging.debug(f"predict input_ids before update value is {input_ids}, shape is {input_ids.shape}, dtype is {input_ids.dtype}")
+            #logging.debug(f"predict self.kbk_targets value is {self.kbk_targets}, shape is {self.kbk_targets.shape}, dtype is {self.kbk_targets.dtype}")
+            #logging.debug(f"predict input_ids before update value is {input_ids}, shape is {input_ids.shape}, dtype is {input_ids.dtype}")
 
             # decode 时，先将 shape 与 prefill 改为一致
             if input_ids.shape[1] == 1:
-                input_ids = np.concatenate((input_ids, np.zeros((input_ids.shape[0], seq_length - 1))), axis=1)
-                logging.debug(f"predict input_ids before update value is {input_ids}, shape is {input_ids.shape}, dtype is {input_ids.dtype}")
+                input_ids = np.pad(input_ids, [(0, 0), (0, seq_length - 1)], mode='constant')
+                #logging.debug(f"predict input_ids before update value is {input_ids}, shape is {input_ids.shape}, dtype is {input_ids.dtype}")
 
             # 遍历decode_index
             for idx, index in enumerate(decode_index):
                 index = int(decode_index[0])
-                logging.debug(f"===============predict self.kbk_targets len:{len(self.kbk_targets)}")
-                logging.debug(f"===============predict decode index:{index}")
+                #logging.debug(f"===============predict self.kbk_targets len:{len(self.kbk_targets)}")
+                #logging.debug(f"===============predict decode index:{index}")
                 if self.is_prefill:
-                    logging.debug("kbk predict prefill start.")
+                    #logging.debug("kbk predict prefill start.")
                     self.kbk_targets[index] = input_ids[idx]
                 else:
-                    logging.debug("kbk predict decode start.")
+                    #logging.debug("kbk predict decode start.")
                     current_index_value = int(current_index[idx])
-                    logging.debug(f"predict decode before curr_input_ids==============current_index_value：{current_index_value}")
+                    #logging.debug(f"predict decode before curr_input_ids==============current_index_value：{current_index_value}")
                     self.kbk_targets[index][current_index_value:current_index_value + 1] = input_ids[idx][:1]
                     input_ids[idx] = self.kbk_targets[index]
-                    logging.debug(f"predict input_ids after update value is {input_ids}, shape is {input_ids.shape}, dtype is {input_ids.dtype}")
+                    #logging.debug(f"predict input_ids after update value is {input_ids}, shape is {input_ids.shape}, dtype is {input_ids.dtype}")
 
-            logging.debug(f"predict current_index value is {current_index}")
-            logging.debug(f"predict valid_length value is {valid_length}, shape is {valid_length.shape}, dtype is {valid_length.dtype}")
-            logging.info('agent pre-process time is {}'.format((time.time() - start_time) * 1000))
+            #logging.debug(f"predict current_index value is {current_index}")
+            #logging.debug(f"predict valid_length value is {valid_length}, shape is {valid_length.shape}, dtype is {valid_length.dtype}")
+            #logging.info('agent pre-process time is {}'.format((time.time() - start_time) * 1000))
+
+            #predict_time = time.time()
             outputs = self.predict_for_kbk(current_index, input_ids, valid_length, block_tables_np, slot_mapping_np)
+            #logging.info(f"predict_time: {time.time() - predict_time}")
 
-        post_time = time.time()
+        #post_time = time.time()
         if self.rank_id == 0:
-            multi_thread_time = time.time()
+            #multi_thread_time = time.time()
             if self.is_prefill:
                 self.do_post_sampling(outputs, output_shm, output_logprob_shm, decode_index_np, prefill=True)
             else:
                 self.do_post_sampling(outputs, output_shm, output_logprob_shm, decode_index_np, prefill=False)
-                logging.info('multi_thread_post_sampling time is {}'.format((time.time() - multi_thread_time) * 1000))
-            logging.info('target is  {}'.format((self.targets)))
-        logging.info('post_time is {}'.format((time.time() - post_time) * 1000))
+            #logging.info('multi_thread_post_sampling time is {}'.format((time.time() - multi_thread_time) * 1000))
+            #logging.info('target is  {}'.format((self.targets)))
+        #logging.info('post_time is {}'.format((time.time() - post_time) * 1000))
         logging.info('npu_total_time is {}'.format((time.time() - start_time) * 1000))
         self.status &= ~AgentStatus.busy
         return self.targets, tmp_shms
@@ -787,7 +788,7 @@ class WorkAgent:
             outputs_list = model.predict((lite_inputs[0], lite_inputs[1], init_reset_ms_tensor, lite_inputs[2]))
         else:
             outputs_list = model.predict(lite_inputs)
-        logging.debug("outputs tensor after model predict type {}, value is {}".format(outputs_list[0].dtype, outputs_list[0]))
+        #logging.debug("outputs tensor after model predict type {}, value is {}".format(outputs_list[0].dtype, outputs_list[0]))
         logging.info('predict time is {}'.format((time.time() - predict_time) * 1000))
         outputs = outputs_list[0]
         return outputs
@@ -799,11 +800,11 @@ class WorkAgent:
         # 封装调用模型参数
         model_kwargs = {"current_index": current_index}
         model_inputs = self.mindspore_model.prepare_inputs_for_generation(input_ids, **model_kwargs)
-        logging.debug(f"predict model_inputs value is {model_inputs}")
+        #logging.debug(f"predict model_inputs value is {model_inputs}")
         # 调用mindformers进行推理
-        predict_time = time.time()
+        #predict_time = time.time()
         if self.mindspore_model.config.use_past:
-            logging.debug(f"predict before pa predict_for_kbk.")
+            #logging.debug("predict before pa predict_for_kbk.")
             if self.is_prefill:
                 self.mindspore_model.is_first_iteration = True
             res, current_index = self.mindspore_model.forward(
@@ -817,14 +818,14 @@ class WorkAgent:
             )
         else:
             res = self.mindspore_model(**model_inputs)
-        logging.info('predict time is {}'.format((time.time() - predict_time) * 1000))
-        logging.debug("mindspore_model res : %s;", res)
+        #logging.info('predict time is {}'.format((time.time() - predict_time) * 1000))
+        #logging.debug("mindspore_model res : %s;", res)
         outputs = res[0] if isinstance(res, tuple) else res
         return outputs
 
 
 def start_agent_socket_server(i:int, cfg: ServingConfig, startup_queue):
-    logging.basicConfig(level=logging.ERROR,
+    logging.basicConfig(level=logging.INFO,
                         filename=f"./output/agent_{i}.log",
                         filemode='w',
                         format=
@@ -867,7 +868,7 @@ def start_agent_socket_server(i:int, cfg: ServingConfig, startup_queue):
                 data = conn.recv(4096)
                 if not data: break
                 data = data.decode()
-                logging.debug(f"data received is {data}")
+                #logging.debug(f"data received is {data}")
 
                 # worker 和 agent建联
                 if data.startswith('#'):
@@ -876,10 +877,10 @@ def start_agent_socket_server(i:int, cfg: ServingConfig, startup_queue):
                         data = data[1:]
                         work_agent.shm_names = data.split(",")
                         work_agent.status = AgentStatus.connected
-                        print("connect succes")
+                        #print("connect succes")
                         conn.sendall("succes".encode())
                     else:
-                        print("connect failed")
+                        #print("connect failed")
                         conn.sendall("failed".encode())
                 elif data.startswith('*'):
                     # e.g.: *1 4099,1 6,1 256,4096
@@ -919,16 +920,16 @@ def start_agent_socket_server(i:int, cfg: ServingConfig, startup_queue):
                 elif data.startswith('e'):
                     # worker退出获取agent状态，free状态下才允许退出
                     if work_agent.status & AgentStatus.busy == AgentStatus.busy:
-                        print("busy")
+                        #print("busy")
                         conn.sendall("busy".encode())
                     else:
                         work_agent.status = AgentStatus.unconnected
-                        print("free")
+                        #print("free")
                         conn.sendall("free".encode())
                 elif data.startswith('r'):
                     # reset agents status
                     work_agent.status = AgentStatus.unconnected
-                    print("reset succes")
+                    #print("reset succes")
                     conn.sendall("succes".encode())
             except ConnectionResetError:
                 break

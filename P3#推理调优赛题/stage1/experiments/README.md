@@ -16,7 +16,7 @@
 [performance]  3513.11s = 58.55min (推算 35.81ms/token， 多线程测定总时间)
 [llm-serving] ~3996.02s = 66.60min (测定 40ms/token, 单线程推算总时间)
 [mindformers]  2395.26s = 39.92min (测定 25ms/token)
- (overhead)              18.63min
+ (overhead)               18.63min
 ```
 
 ⚠ 核心问题在于定位 15ms/token 的额外开销！
@@ -29,7 +29,7 @@
       -> LlamaForCausalLM.construct           // if prefill
       -> GenerationMixin._incremental_infer   // if decode
         -> LlamaForCausalLM.construct
-    -> GenerationMixin.postprocess            // 推测 ~3ms
+    -> GenerationMixin.postprocess            // 推测 ~2.5ms
 
 [llm-serving call-chain]
 -> LLMServer.generate_answer                              // 推理一个请求单位
@@ -38,7 +38,7 @@
       -> LLMServer.run_loop
         -> LLMServer.step
           -> AsyncMaster.step_async                       // 决定 batching 策略
-            -> AsyncMaster._run_workers_async             // 测定 40ms/token
+            -> AsyncMaster._run_workers_async             // 测定 40ms/token -> 优化后 27ms/token
               -> Worker.predict                           // 测定 39.55ms
                 - Worker._predict
                   -> DisModel.call                        // 测定 39.47ms
@@ -48,15 +48,28 @@
                         - tcp::recv
                         - WorkAgent.predictc
                           - shared_mem::read
-                          - agent pre-process             // 测定 12.0ms [这就是额外开销!!]
+                          - agent pre-process             // 测定 12.0ms [这tm就是额外开销!!]
                           - WorkAgent.predict_for_kbk     // 测定 22.5ms
                             -> GenerationMixin.forward    // 流程同上 mindformers (*)
-                          - WorkAgent.do_post_sampling    // 测定 3.04ms
+                          - WorkAgent.do_post_sampling    // 测定 3.04ms [这tm也有一点额外开销!!]
                           - shared_mem::write
                         - tcp::sendall
                     - tcp::recv
                     - shared_mem::read
               - AsyncMaster._postprocess                  // 测定 0.83ms
+```
+
+↑↑↑ 额外开销分析 & 解决 ↓↓↓
+
+```
+[WorkAgent.predict (agent pre-process)]
+- preprocess_time: 12.47ms
+  - logging.debug: ~7ms (移除!)
+  - np.concatenate: 4.8ms (改用np.pad!)
+- predict_time: 22.48ms
+- post_time: 3.59ms
+  - logits_to_token: 2.522ms
+  - write_shared_mem: 0.716ms
 ```
 
 

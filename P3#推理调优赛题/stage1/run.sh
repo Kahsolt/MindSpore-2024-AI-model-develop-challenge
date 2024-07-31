@@ -10,7 +10,8 @@ python examples/start_agent.py --task 1 --config configs/llama/llama_7b_kbk_pa_d
 python examples/server_app_post.py --config configs/llama/llama_7b_kbk_pa_dyn.yaml
 
 
-# test llm-serving
+# test llm-serving (warm up)
+# 一定要预热，不然测不准！
 curl 127.0.0.1:8835/models/llama2/generate \
   -X POST \
   -d '{"inputs":" I love Beijing, because","parameters":{"max_new_tokens":56, "do_sample":"True", "return_full_text":"True"}, "stream":"True"}' \
@@ -21,7 +22,7 @@ curl 127.0.0.1:8835/models/llama2/generate \
 cd /home/ma-user/work/performance_serving/
 
 # test task 1 (--task should match with examples/start.py)
-python test_serving_performance.py --task 1 -X 0.6 -T 2500
+python test_serving_performance.py --task 1 -X 0.625 -T 2400
 
 # test task 2 (--task should match with examples/start.py)
 python test_serving_performance.py --task 2 -X 0.1 -T 5000

@@ -64,8 +64,8 @@ class Worker:
             pad_item = np.pad(item, (0, pad_length), 'constant', constant_values=default_padding_values)
             pad_ids.append(pad_item)
 
-        logging.debug("prefill _padding result list is {}".format(pad_ids))
-        return np.array(pad_ids)
+        #logging.debug("prefill _padding result list is {}".format(pad_ids))
+        return np.asarray(pad_ids)
 
     @staticmethod
     def _get_valid_length(origin_inputs, default_padding_values):
@@ -74,7 +74,7 @@ class Worker:
         for i in range(batch_size):
             # As the nonzero returns the index and we need length
             valid_length_each_example.append(np.max(np.argwhere(origin_inputs[i] != default_padding_values)) + 1)
-        valid_length = np.array(valid_length_each_example, dtype=np.int32)
+        valid_length = np.asarray(valid_length_each_example, dtype=np.int32)
         return valid_length, batch_size
 
     # pa
@@ -109,7 +109,7 @@ class Worker:
         time_start = time.time()
         # Init outputs with original inputs
         seq_length = self._get_seq_length(input_ids, is_prefill)
-        logging.info("decode_seq_length: %s", seq_length)
+        #logging.info("decode_seq_length: %s", seq_length)
         generate_parms["seq_length"] = seq_length
         if is_prefill:
             default_padding_values = 0
@@ -124,7 +124,7 @@ class Worker:
         # For first graph, not_init should be false
         init_true = True
         init = init_true and not is_prefill
-        logging.info("pre-process time is {} ".format((time.time() - time_start) * 1000))
+        #logging.info("pre-process time is {} ".format((time.time() - time_start) * 1000))
 
         extra_input_list = self.extra_func.get_extra_inputs(input_ids, self.current_index, init, is_prefill,
                                                             self.valid_length,
