@@ -13,8 +13,9 @@ class WorkAgent(WorkAgentBase):
 
         #2222222222222222222222222222222222222222222222
         predict_time = time.time()
-        
-        input_ids_str = ''.join(map(str, input_ids[0].tolist()))
+
+        # FIXME: 很奇怪，我们产生的文件名不能直接匹配标准参考文件名，在这里修复一下 :(
+        input_ids_str = '.'.join([str(id) if idx == 0 else f'0{id}' for idx, id in enumerate(input_ids[0].tolist())])
         current_index_str = str(current_index.item())
         filename = str(predict_time) + '_' + input_ids_str[:20] + '_' + current_index_str + '.npy'
         logging.info(f"***********************filename = {filename}")

@@ -10,7 +10,7 @@ model_config:
     # input
     model_type: 'dyn'       # seems conflict with `seq_type`!!
     seq_type: 'static'
-    seq_length: [512]
+    seq_length: [4096]
     # output
     max_generate_length: 4096
     # batching
@@ -35,7 +35,7 @@ serving_config:
 pa_config:      # page_attention
     num_blocks: 1024
     block_size: 16
-    decode_seq_length: 512
+    decode_seq_length: 4096
 
 tokenizer:
     type: LlamaTokenizer
