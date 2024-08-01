@@ -38,7 +38,7 @@ from mindspore_serving.serving_utils.constant import *
 
 DEBUG_WIN = os.getenv('DEBUG_WIN')
 work_path = os.path.dirname(os.path.abspath(__file__))
-logging.basicConfig(level=logging.DEBUG,
+logging.basicConfig(level=logging.INFO,
                     filename='./output/server_app.log',
                     filemode='w',
                     format=

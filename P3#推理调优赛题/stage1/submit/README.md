@@ -16,7 +16,7 @@
 ```shell
 # launch llm-serving
 cd /home/ma-user/work/llm-serving/
-python examples/start.py --task 1 --config configs/llama/llama_7b_kbk_pa_dyn.yaml
+python examples/start.py --task 1 --config configs/llama/llama_7b_kbk_pa_dyn_512.yaml
 
 # test llm-serving (warm up)
 # 一定要预热，不然测不准！
@@ -35,7 +35,7 @@ python test_serving_performance.py --task 1 -X 0.625 -T 2400
 实验结果见日志: [test_performance_2024-07-31-21_56.log](./test_performance_2024-07-31-21_56.log)
 
 ⚠ 注意: 我们优化了序列化保存的代码，直接保存 `NDArray[np.float32]` 而非 `NDArray[ms.Tensor]`，因此我们修改了评测脚本 `acc_allclose.py` 的第 53~54 行 :)  
-⚠ 注意: 有一个样例未通过 (213/214)，其基线文件名为 `1718421271.1172364_17523278149414880322_100.npy` 不符合命名模板诸如 `1718419385.1024787_1.03251.0403.0263.09_200.npy` 等，不知道是不是基线数据有问题 :(  
+⚠ 注意: 有一个样例未通过 (213/214)，其基线文件名为 `1718421271.1172364_17523278149414880322_100.npy` 不符合命名模板诸如 `1722435014.2383034_1.07523.0278.01494.0_100.npy` 等，不知道是不是基线数据有问题 :(  
 
 ```shell
 # launch llm-serving
