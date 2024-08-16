@@ -16,3 +16,6 @@ log/
 
 # tmp
 tmp/
+
+# info
+TEAM.txt
